@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Rust
+/rust/target/
+Cargo.lock
+
+# Node
+node_modules/
+*.tgz

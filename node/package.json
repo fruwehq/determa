@@ -1,0 +1,16 @@
+{
+  "name": "determa",
+  "version": "0.1.0",
+  "description": "Umbrella launcher for the Determa family — git-style dispatch to determa-<product> commands",
+  "keywords": ["determa", "cli", "launcher", "statechart", "dispatcher"],
+  "license": "MIT",
+  "author": "fruwehq",
+  "repository": { "type": "git", "url": "https://github.com/fruwehq/determa.git" },
+  "homepage": "https://github.com/fruwehq/determa",
+  "bin": { "determa": "bin/determa.js" },
+  "files": ["bin/", "README.md"],
+  "engines": { "node": ">=16" },
+  "scripts": {
+    "test": "node test/dispatch.test.js"
+  }
+}

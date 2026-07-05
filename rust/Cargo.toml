@@ -1,0 +1,15 @@
+[package]
+name = "determa"
+version = "0.1.0"
+edition = "2021"
+authors = ["fruwehq"]
+license = "MIT"
+description = "Umbrella launcher for the Determa family — git-style dispatch to determa-<product> commands"
+repository = "https://github.com/fruwehq/determa"
+readme = "README.md"
+keywords = ["determa", "cli", "launcher", "statechart", "dispatcher"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "determa"
+path = "src/main.rs"

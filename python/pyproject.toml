@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "determa"
+version = "0.1.0"
+description = "Umbrella launcher for the Determa family — git-style dispatch to determa-<product> commands"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Christian-Manuel Butzke" }]
+keywords = ["determa", "cli", "launcher", "statechart", "dispatcher"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development",
+]
+
+[project.optional-dependencies]
+# Convenience installs: `pip install "determa[state]"` gets the launcher + the
+# statechart engine; `determa[all]` gets the whole family.
+state = ["determa-state"]
+all = ["determa-state"]
+dev = ["pytest>=8", "ruff"]
+
+[project.urls]
+Homepage = "https://github.com/fruwehq/determa"
+Repository = "https://github.com/fruwehq/determa"
+Issues = "https://github.com/fruwehq/determa/issues"
+
+[project.scripts]
+determa = "determa._cli:main"
+
+# `determa` is a PEP 420 namespace root (no determa/__init__.py) so it can coexist
+# with determa-state's `determa.state` package. Ship only the launcher module.
+[tool.hatch.build.targets.wheel]
+sources = ["src"]
+only-include = ["src/determa/_cli.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W", "C4"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
