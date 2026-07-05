@@ -1,0 +1,47 @@
+name: release
+
+# Tag-triggered release for the determa launcher.
+#
+# PyPI publish uses Trusted Publishing (OIDC) — no stored token. Configure a PyPI
+# Trusted Publisher for project `determa` (repo fruwehq/determa, workflow
+# release.yml, environment `pypi`) before the first tag-driven release.
+#
+# crates.io (rust/) and npm (node/) publish jobs will be added here once their
+# credentials are configured; they share the same `v*` tag.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          python -m twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: python/dist/
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      id-token: write   # OIDC for Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
