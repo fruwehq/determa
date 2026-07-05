@@ -6,14 +6,17 @@ name: release
 # Trusted Publisher for project `determa` (repo fruwehq/determa, workflow
 # release.yml, environment `pypi`) before the first tag-driven release.
 #
-# crates.io (rust/) and npm (node/) publish jobs will be added here once their
-# credentials are configured; they share the same `v*` tag.
+# The npm (node/) publish job will be added here once its credential is configured.
+# All jobs share the same `v*` tag; workflow_dispatch runs only the crates job (used
+# for a first crates.io publish without re-tagging). Requires CARGO_REGISTRY_TOKEN.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 jobs:
   build:
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -35,6 +38,7 @@ jobs:
 
   pypi:
     needs: build
+    if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     environment: pypi
     permissions:
@@ -45,3 +49,14 @@ jobs:
           name: dist
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  crates:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish to crates.io
+        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
