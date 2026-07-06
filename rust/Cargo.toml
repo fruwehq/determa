@@ -1,6 +1,6 @@
 [package]
 name = "determa"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["fruwehq"]
 license = "MIT"
@@ -13,3 +13,6 @@ categories = ["command-line-utilities"]
 [[bin]]
 name = "determa"
 path = "src/main.rs"
+
+[dev-dependencies]
+tempfile = "3"

@@ -61,3 +61,70 @@ def test_list_discovers_products(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("PATH", str(tmp_path))  # isolate PATH to the stub dir
     assert cli.main(["list"]) == 0
     assert capsys.readouterr().out.split() == ["alpha", "beta"]
+
+
+# --- implementation selection (DETERMA_<PRODUCT>_IMPL) ---------------------
+
+def _make_state_stubs(tmp_path):
+    """Create determa-state, determa-state-python, determa-state-rust stubs that
+    each print a distinct marker so tests can tell which one ran."""
+    for name, marker in (
+        ("determa-state", "canonical"),
+        ("determa-state-python", "python"),
+        ("determa-state-rust", "rust"),
+    ):
+        exe = tmp_path / name
+        exe.write_text(f'#!/bin/sh\necho "ran:{marker}: $*"\nexit 0\n')
+        exe.chmod(0o755)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="uses a POSIX shell stub")
+def test_dispatch_prefers_impl_env_var(tmp_path, monkeypatch, capfd):
+    _make_state_stubs(tmp_path)
+    monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ.get("PATH", ""))
+    monkeypatch.setenv("DETERMA_STATE_IMPL", "rust")
+    assert cli.main(["state", "--version"]) == 0
+    assert "ran:rust: --version" in capfd.readouterr().out
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="uses a POSIX shell stub")
+def test_dispatch_env_var_unset_uses_canonical(tmp_path, monkeypatch, capfd):
+    _make_state_stubs(tmp_path)
+    monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ.get("PATH", ""))
+    monkeypatch.delenv("DETERMA_STATE_IMPL", raising=False)
+    assert cli.main(["state", "info"]) == 0
+    assert "ran:canonical: info" in capfd.readouterr().out
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="uses a POSIX shell stub")
+def test_dispatch_impl_missing_falls_back_to_canonical(tmp_path, monkeypatch, capfd):
+    # Only the canonical binary exists; the requested impl is absent -> fall back.
+    exe = tmp_path / "determa-state"
+    exe.write_text('#!/bin/sh\necho "ran:canonical: $*"\nexit 0\n')
+    exe.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ.get("PATH", ""))
+    monkeypatch.setenv("DETERMA_STATE_IMPL", "rust")
+    assert cli.main(["state", "ping"]) == 0
+    assert "ran:canonical: ping" in capfd.readouterr().out
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="uses a POSIX shell stub")
+def test_list_shows_impl_variants(tmp_path, monkeypatch, capsys):
+    _make_state_stubs(tmp_path)
+    monkeypatch.setenv("PATH", str(tmp_path))  # isolate PATH
+    assert cli.main(["list"]) == 0
+    out = capsys.readouterr().out
+    assert "state (python, rust)" in out
+    # the bare canonical-only stems are not double-listed
+    assert "state-python" not in out
+    assert "state-rust" not in out
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="uses a POSIX shell stub")
+def test_help_shows_impl_variants(tmp_path, monkeypatch, capsys):
+    _make_state_stubs(tmp_path)
+    monkeypatch.setenv("PATH", str(tmp_path))
+    assert cli.main(["--help"]) == 0
+    out = capsys.readouterr().out
+    assert "state (python, rust)" in out
+    assert "DETERMA_<PRODUCT>_IMPL" in out
