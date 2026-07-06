@@ -63,18 +63,25 @@ jobs:
       - name: Publish to crates.io
         run: cargo publish
 
+  # npm Trusted Publishing (OIDC) — no stored token. Requires the `determa` npm
+  # package to already exist with a configured trusted publisher (repo fruwehq/determa,
+  # workflow release.yml). The very first 0.1.0 is published manually to create the
+  # package; every release after that runs here token-lessly (with provenance).
   npm:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: node
+    permissions:
+      id-token: write   # OIDC for npm Trusted Publishing
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
+      - name: Ensure npm supports trusted publishing (>= 11.5.1)
+        run: npm install -g npm@latest
       - name: Publish to npm
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
