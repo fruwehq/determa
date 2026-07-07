@@ -1,6 +1,6 @@
 {
   "name": "determa",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Umbrella launcher for the Determa family — git-style dispatch to determa-<product> commands",
   "keywords": ["determa", "cli", "launcher", "statechart", "dispatcher"],
   "license": "MIT",
