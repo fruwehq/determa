@@ -18,7 +18,7 @@ Implementation selection: `determa state …` honors `DETERMA_<PRODUCT>_IMPL`
 canonical `determa-<product>`. `determa list` groups variants, e.g. `state (python, rust)`.
 
 The launcher versions **independently** of the spec (currently **0.2.0**; the Determa State
-spec/engines are at 0.0.6).
+spec/engines are at 0.0.7).
 
 ## Determa in one paragraph
 **Determa** is a family for defining/running well-specified, verifiable behavior. Its first
@@ -54,7 +54,9 @@ Note: unlike `determa-state-rust`, the rust launcher **does** enforce `clippy -D
 ## Releasing (a single `vX.Y.Z` tag releases all three)
 `release.yml` on a `v*` tag:
 - **PyPI** (`python/`) via **Trusted Publishing (OIDC)** — gated on the `pypi` GitHub Environment (manual approval).
-- **crates.io** (`rust/`) via `CARGO_REGISTRY_TOKEN` (org secret). `workflow_dispatch` runs the crates job alone.
+- **crates.io** (`rust/`) via **Trusted Publishing (OIDC)**. The workflow passes the
+  short-lived publisher token to Cargo through `CARGO_REGISTRY_TOKEN`; it is not a stored
+  secret. `workflow_dispatch` runs the crates job alone.
 - **npm** (`node/`) via **OIDC Trusted Publishing** — a trusted publisher is configured on the npm `determa` package (no token; `NPM_TOKEN` has been removed).
 
 Bump the version in `python/pyproject.toml`, `rust/Cargo.toml`, **and** `node/package.json` together before tagging.
