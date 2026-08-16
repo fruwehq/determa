@@ -198,8 +198,9 @@ library's platform-dependent URL normalization is not normative.
      accepted by some URL libraries.
    - A bracketed IPv6 literal MUST parse under RFC 4291 section 2.2 and MUST be
      emitted in brackets using RFC 5952 sections 4.1 through 4.3. Always emit
-     all 128 bits in hexadecimal form. A dotted-decimal IPv4 suffix is accepted
-     only when it supplies the final 32 bits of the IPv6 address; for example,
+     all 128 bits in hexadecimal form. At most one dotted-decimal IPv4
+     production is accepted, and only when it supplies the single final 32-bit
+     component of the IPv6 address; for example,
      `::ffff:192.0.2.1` is emitted as `::ffff:c000:201`, never with dotted
      decimal, while `192.0.2.1::1` is invalid. IPvFuture literals are invalid.
      Zone identifiers, including RFC 6874 `%25zone` syntax, are invalid.

@@ -35,6 +35,20 @@ for (const case_ of loadFixture("endpoints.json").cases) {
   assertCase(case_, () => family.canonicalizeEndpoint(case_.input));
 }
 
+for (const endpoint of [
+  "https://[192.0.2.1::5.6.7.8]/",
+  "https://[::192.0.2.1:5.6.7.8]/",
+  "https://[1:2:3:4:192.0.2.1:5.6.7.8]/",
+]) {
+  assert.throws(
+    () => family.canonicalizeEndpoint(endpoint),
+    error =>
+      error instanceof family.FamilyConnectionError &&
+      error.code === "invalid_endpoint_host",
+    endpoint
+  );
+}
+
 const environmentFixture = loadFixture("environment.json");
 const environmentResults = new Map();
 for (const case_ of environmentFixture.cases) {

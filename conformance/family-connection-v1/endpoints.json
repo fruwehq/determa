@@ -273,6 +273,11 @@
       "expect": {"error": "invalid_endpoint_host"}
     },
     {
+      "id": "endpoint-multiple-ipv4-productions-in-ipv6",
+      "input": "https://[192.0.2.1::5.6.7.8]/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
       "id": "endpoint-ipv6-zone",
       "input": "http://[fe80::1%25en0]/",
       "expect": {"error": "invalid_endpoint_host"}

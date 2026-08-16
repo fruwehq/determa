@@ -431,7 +431,12 @@ function parseIpv6Part(part) {
 function parseIpv6(rawHost) {
   if (!rawHost || rawHost.includes("%")) fail("invalid_endpoint_host");
   if ((rawHost.match(/::/g) || []).length > 1) fail("invalid_endpoint_host");
-  if (rawHost.includes(".") && !/(?:^|:)(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*)){3}$/.test(rawHost)) {
+  const colonParts = rawHost.split(":");
+  const dottedParts = colonParts.filter(part => part.includes("."));
+  if (
+    dottedParts.length > 1 ||
+    (dottedParts.length === 1 && dottedParts[0] !== colonParts[colonParts.length - 1])
+  ) {
     fail("invalid_endpoint_host");
   }
 

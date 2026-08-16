@@ -50,9 +50,9 @@ python3 scripts/validate-family-connection-v1-vectors.py
 cd python && pip install -e '.[dev]' && ruff check . && pytest -q
 # rust
 python3 scripts/check-rust-msrv.py rust
-cd rust && cargo build --release --locked && cargo clippy --release --all-targets --all-features --locked -- -D warnings && cargo test --locked && cargo test --locked --features repository-fixtures
+cd rust && cargo build --release --locked && cargo clippy --release --all-targets --all-features --locked -- -D warnings && cargo test --locked && cargo run --locked --example family-connection-context-v1-vectors --features repository-fixtures
 # rust MSRV
-cd rust && cargo +1.81.0 build --release --locked && cargo +1.81.0 test --locked && cargo +1.81.0 test --locked --features repository-fixtures
+cd rust && cargo +1.81.0 build --release --locked && cargo +1.81.0 test --locked && cargo +1.81.0 run --locked --example family-connection-context-v1-vectors --features repository-fixtures
 # node
 cd node && npm ci && npm test
 ```
