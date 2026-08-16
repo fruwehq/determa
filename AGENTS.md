@@ -40,8 +40,11 @@ that ties the family together and reserves the `determa` name on every registry.
 - **No AI/assistant attribution** anywhere (commits, PRs, comments, docs).
 - Keep the three launchers **behaviorally identical** (same dispatch, env-var selection, `list` grouping, help text). Each has its own test suite.
 
-## Gates (`ci.yml` runs all three)
+## Gates (`ci.yml` runs the family vectors and all three launchers)
 ```sh
+# family connection/context vectors
+python3 scripts/validate-family-connection-v1-vectors.py
+
 # python
 cd python && pip install -e '.[dev]' && ruff check . && pytest -q
 # rust

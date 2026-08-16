@@ -1,0 +1,263 @@
+{
+  "contract": "family-connection-context-v1",
+  "suite": "configuration",
+  "cases": [
+    {
+      "id": "config-minimal-empty",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{}}",
+      "expect": {
+        "value": {
+          "version": 1,
+          "connections": {},
+          "contexts": {}
+        }
+      }
+    },
+    {
+      "id": "config-explicit-empty-defaults",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{},\"defaults\":{\"routes\":{}}}",
+      "expect": {
+        "value": {
+          "version": 1,
+          "connections": {},
+          "contexts": {},
+          "defaults": {"routes": {}}
+        }
+      }
+    },
+    {
+      "id": "config-empty-default-context",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{\"personal\":{\"routes\":{}}},\"default_context\":\"personal\"}",
+      "expect": {
+        "value": {
+          "version": 1,
+          "connections": {},
+          "contexts": {"personal": {"routes": {}}},
+          "default_context": "personal"
+        }
+      }
+    },
+    {
+      "id": "config-full-normalized",
+      "source": "{\"version\":1,\"default_context\":\"personal\",\"connections\":{\"cloud\":{\"endpoint\":\"HTTPS://BÜCHER.example:443/a/./\",\"credential_ref\":{\"provider\":\"environment\",\"name\":\"DETERMA_TOKEN\"}}},\"contexts\":{\"personal\":{\"routes\":{\"state\":\"cloud\",\"state/instances\":\"cloud\"}}},\"defaults\":{\"routes\":{\"guard\":\"cloud\"}}}",
+      "expect": {
+        "value": {
+          "version": 1,
+          "connections": {
+            "cloud": {
+              "endpoint": "https://xn--bcher-kva.example/a",
+              "credential_ref": {
+                "provider": "environment",
+                "name": "DETERMA_TOKEN"
+              }
+            }
+          },
+          "contexts": {
+            "personal": {
+              "routes": {
+                "state": "cloud",
+                "state/instances": "cloud"
+              }
+            }
+          },
+          "default_context": "personal",
+          "defaults": {"routes": {"guard": "cloud"}}
+        }
+      }
+    },
+    {
+      "id": "config-separate-name-namespaces",
+      "source": "{\"version\":1,\"connections\":{\"same\":{\"endpoint\":\"https://example.com\"},\"other\":{\"endpoint\":\"https://example.com/\"}},\"contexts\":{\"same\":{\"routes\":{\"state\":\"other\"}}}}",
+      "expect": {
+        "value": {
+          "version": 1,
+          "connections": {
+            "same": {"endpoint": "https://example.com/"},
+            "other": {"endpoint": "https://example.com/"}
+          },
+          "contexts": {"same": {"routes": {"state": "other"}}}
+        }
+      }
+    },
+    {
+      "id": "config-version-string",
+      "source": "{\"version\":\"1\",\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "invalid_version"}
+    },
+    {
+      "id": "config-version-float",
+      "source": "{\"version\":1.0,\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "invalid_version"}
+    },
+    {
+      "id": "config-version-exponent",
+      "source": "{\"version\":1e0,\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "invalid_version"}
+    },
+    {
+      "id": "config-version-two",
+      "source": "{\"version\":2,\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "invalid_version"}
+    },
+    {
+      "id": "config-version-boolean",
+      "source": "{\"version\":true,\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "invalid_version"}
+    },
+    {
+      "id": "config-version-null",
+      "source": "{\"version\":null,\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "invalid_version"}
+    },
+    {
+      "id": "config-root-not-object",
+      "source": "[]",
+      "expect": {"error": "invalid_type"}
+    },
+    {
+      "id": "config-missing-version",
+      "source": "{\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "missing_field"}
+    },
+    {
+      "id": "config-missing-connections",
+      "source": "{\"version\":1,\"contexts\":{}}",
+      "expect": {"error": "missing_field"}
+    },
+    {
+      "id": "config-missing-contexts",
+      "source": "{\"version\":1,\"connections\":{}}",
+      "expect": {"error": "missing_field"}
+    },
+    {
+      "id": "config-connections-not-map",
+      "source": "{\"version\":1,\"connections\":[],\"contexts\":{}}",
+      "expect": {"error": "invalid_type"}
+    },
+    {
+      "id": "config-contexts-not-map",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":[]}",
+      "expect": {"error": "invalid_type"}
+    },
+    {
+      "id": "config-unknown-root-field",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{},\"extra\":{}}",
+      "expect": {"error": "unknown_field"}
+    },
+    {
+      "id": "config-invalid-connection-name",
+      "source": "{\"version\":1,\"connections\":{\"Cloud\":{\"endpoint\":\"https://example.com\"}},\"contexts\":{}}",
+      "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "config-connection-not-object",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":null},\"contexts\":{}}",
+      "expect": {"error": "invalid_type"}
+    },
+    {
+      "id": "config-connection-missing-endpoint",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{}},\"contexts\":{}}",
+      "expect": {"error": "missing_field"}
+    },
+    {
+      "id": "config-connection-unknown-field",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"https://example.com\",\"extra\":true}},\"contexts\":{}}",
+      "expect": {"error": "unknown_field"}
+    },
+    {
+      "id": "config-empty-endpoint",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"\"}},\"contexts\":{}}",
+      "expect": {"error": "invalid_endpoint_syntax"}
+    },
+    {
+      "id": "config-insecure-endpoint",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"http://example.com\"}},\"contexts\":{}}",
+      "expect": {"error": "insecure_endpoint"}
+    },
+    {
+      "id": "config-null-credential-reference",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"https://example.com\",\"credential_ref\":null}},\"contexts\":{}}",
+      "expect": {"error": "invalid_type"}
+    },
+    {
+      "id": "config-credential-unknown-field",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"https://example.com\",\"credential_ref\":{\"provider\":\"environment\",\"name\":\"TOKEN\",\"extra\":true}}},\"contexts\":{}}",
+      "expect": {"error": "unknown_field"}
+    },
+    {
+      "id": "config-invalid-credential-provider",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"https://example.com\",\"credential_ref\":{\"provider\":\"Environment\",\"name\":\"TOKEN\"}}},\"contexts\":{}}",
+      "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "config-empty-credential-name",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"https://example.com\",\"credential_ref\":{\"provider\":\"environment\",\"name\":\"\"}}},\"contexts\":{}}",
+      "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "config-invalid-context-name",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{\"Personal\":{\"routes\":{}}}}",
+      "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "config-context-missing-routes",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{\"personal\":{}}}",
+      "expect": {"error": "missing_field"}
+    },
+    {
+      "id": "config-context-unknown-field",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{\"personal\":{\"routes\":{},\"extra\":true}}}",
+      "expect": {"error": "unknown_field"}
+    },
+    {
+      "id": "config-routes-not-map",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{\"personal\":{\"routes\":[]}}}",
+      "expect": {"error": "invalid_type"}
+    },
+    {
+      "id": "config-invalid-route-name",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"https://example.com\"}},\"contexts\":{\"personal\":{\"routes\":{\"state/foo_bar\":\"cloud\"}}}}",
+      "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "config-route-target-not-string",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"https://example.com\"}},\"contexts\":{\"personal\":{\"routes\":{\"state\":1}}}}",
+      "expect": {"error": "invalid_type"}
+    },
+    {
+      "id": "config-missing-route-connection",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{\"personal\":{\"routes\":{\"state\":\"cloud\"}}}}",
+      "expect": {"error": "invalid_reference"}
+    },
+    {
+      "id": "config-missing-default-context",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{},\"default_context\":\"personal\"}",
+      "expect": {"error": "invalid_reference"}
+    },
+    {
+      "id": "config-defaults-missing-routes",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{},\"defaults\":{}}",
+      "expect": {"error": "missing_field"}
+    },
+    {
+      "id": "config-duplicate-root-key",
+      "source": "{\"version\":1,\"version\":1,\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "duplicate_key"}
+    },
+    {
+      "id": "config-duplicate-connection-name",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"https://one.example\"},\"cloud\":{\"endpoint\":\"https://two.example\"}},\"contexts\":{}}",
+      "expect": {"error": "duplicate_key"}
+    },
+    {
+      "id": "config-duplicate-route-name",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"https://example.com\"}},\"contexts\":{\"personal\":{\"routes\":{\"state\":\"cloud\",\"state\":\"cloud\"}}}}",
+      "expect": {"error": "duplicate_key"}
+    },
+    {
+      "id": "config-invalid-json-source",
+      "source": "{\"version\":1,",
+      "expect": {"error": "invalid_source"}
+    }
+  ]
+}

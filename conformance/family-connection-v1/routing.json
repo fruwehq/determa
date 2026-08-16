@@ -1,0 +1,228 @@
+{
+  "contract": "family-connection-context-v1",
+  "suite": "routing",
+  "configurations": {
+    "all-levels": "{\"version\":1,\"connections\":{\"explicit\":{\"endpoint\":\"https://explicit.example\"},\"environment-exact\":{\"endpoint\":\"https://environment-exact.example\"},\"environment-product\":{\"endpoint\":\"https://environment-product.example\"},\"environment-global\":{\"endpoint\":\"https://environment-global.example\"},\"context-exact\":{\"endpoint\":\"https://context-exact.example\"},\"context-product\":{\"endpoint\":\"https://context-product.example\"},\"default-exact\":{\"endpoint\":\"https://default-exact.example\"},\"default-product\":{\"endpoint\":\"https://default-product.example\"},\"global-exact\":{\"endpoint\":\"https://global-exact.example\"},\"global-product\":{\"endpoint\":\"https://global-product.example\"}},\"contexts\":{\"selected\":{\"routes\":{\"state/foo\":\"context-exact\",\"state\":\"context-product\"}},\"empty\":{\"routes\":{}},\"global\":{\"routes\":{\"state/foo\":\"global-exact\",\"state\":\"global-product\"}}},\"default_context\":\"global\",\"defaults\":{\"routes\":{\"state/foo\":\"default-exact\",\"state\":\"default-product\"}}}",
+    "global-only": "{\"version\":1,\"connections\":{\"global-exact\":{\"endpoint\":\"https://global-exact.example\"},\"global-product\":{\"endpoint\":\"https://global-product.example\"}},\"contexts\":{\"empty\":{\"routes\":{}},\"global\":{\"routes\":{\"state/foo\":\"global-exact\",\"state\":\"global-product\"}}},\"default_context\":\"global\"}",
+    "no-fallback": "{\"version\":1,\"connections\":{\"available\":{\"endpoint\":\"https://available.example\"}},\"contexts\":{}}"
+  },
+  "cases": [
+    {
+      "id": "routing-explicit-wins",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state/foo",
+        "explicit_connection": "explicit",
+        "environment": {
+          "DETERMA_STATE__FOO_CONNECTION": "environment-exact",
+          "DETERMA_STATE_CONNECTION": "environment-product",
+          "DETERMA_CONNECTION": "environment-global"
+        },
+        "selected_context": "selected"
+      },
+      "expect": {"value": "explicit"}
+    },
+    {
+      "id": "routing-invalid-explicit-no-fallthrough",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state/foo",
+        "explicit_connection": "missing",
+        "environment": {"DETERMA_STATE__FOO_CONNECTION": "environment-exact"},
+        "selected_context": "selected"
+      },
+      "expect": {"error": "invalid_connection"}
+    },
+    {
+      "id": "routing-environment-exact-wins",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state/foo",
+        "environment": {
+          "DETERMA_STATE__FOO_CONNECTION": "environment-exact",
+          "DETERMA_STATE_CONNECTION": "environment-product",
+          "DETERMA_CONNECTION": "environment-global"
+        },
+        "selected_context": "selected"
+      },
+      "expect": {"value": "environment-exact"}
+    },
+    {
+      "id": "routing-environment-product-wins",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state/other",
+        "environment": {
+          "DETERMA_STATE_CONNECTION": "environment-product",
+          "DETERMA_CONNECTION": "environment-global"
+        },
+        "selected_context": "selected"
+      },
+      "expect": {"value": "environment-product"}
+    },
+    {
+      "id": "routing-environment-global-wins",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state/foo",
+        "environment": {"DETERMA_CONNECTION": "environment-global"},
+        "selected_context": "selected"
+      },
+      "expect": {"value": "environment-global"}
+    },
+    {
+      "id": "routing-empty-environment-exact-no-fallthrough",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state/foo",
+        "environment": {"DETERMA_STATE__FOO_CONNECTION": ""},
+        "selected_context": "selected"
+      },
+      "expect": {"error": "invalid_connection"}
+    },
+    {
+      "id": "routing-missing-environment-exact-no-fallthrough",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state/foo",
+        "environment": {"DETERMA_STATE__FOO_CONNECTION": "missing"},
+        "selected_context": "selected"
+      },
+      "expect": {"error": "invalid_connection"}
+    },
+    {
+      "id": "routing-missing-environment-product-no-fallthrough",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state/other",
+        "environment": {"DETERMA_STATE_CONNECTION": "missing"},
+        "selected_context": "selected"
+      },
+      "expect": {"error": "invalid_connection"}
+    },
+    {
+      "id": "routing-missing-environment-global-no-fallthrough",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state/foo",
+        "environment": {"DETERMA_CONNECTION": "missing"},
+        "selected_context": "selected"
+      },
+      "expect": {"error": "invalid_connection"}
+    },
+    {
+      "id": "routing-invalid-environment-type",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state/foo",
+        "environment": {"DETERMA_CONNECTION": null},
+        "selected_context": "selected"
+      },
+      "expect": {"error": "invalid_environment"}
+    },
+    {
+      "id": "routing-selected-context-exact",
+      "configuration": "all-levels",
+      "request": {"resource": "state/foo", "selected_context": "selected"},
+      "expect": {"value": "context-exact"}
+    },
+    {
+      "id": "routing-selected-context-product",
+      "configuration": "all-levels",
+      "request": {"resource": "state/other", "selected_context": "selected"},
+      "expect": {"value": "context-product"}
+    },
+    {
+      "id": "routing-invalid-selected-context-no-fallthrough",
+      "configuration": "all-levels",
+      "request": {"resource": "state/foo", "selected_context": "missing"},
+      "expect": {"error": "invalid_context"}
+    },
+    {
+      "id": "routing-null-selected-context-no-fallthrough",
+      "configuration": "all-levels",
+      "request": {"resource": "state/foo", "selected_context": null},
+      "expect": {"error": "invalid_context"}
+    },
+    {
+      "id": "routing-empty-selected-context-falls-to-defaults",
+      "configuration": "all-levels",
+      "request": {"resource": "state/foo", "selected_context": "empty"},
+      "expect": {"value": "default-exact"}
+    },
+    {
+      "id": "routing-defaults-exact-without-selected-context",
+      "configuration": "all-levels",
+      "request": {"resource": "state/foo"},
+      "expect": {"value": "default-exact"}
+    },
+    {
+      "id": "routing-defaults-product",
+      "configuration": "all-levels",
+      "request": {"resource": "state/other", "selected_context": "empty"},
+      "expect": {"value": "default-product"}
+    },
+    {
+      "id": "routing-global-context-exact",
+      "configuration": "global-only",
+      "request": {"resource": "state/foo"},
+      "expect": {"value": "global-exact"}
+    },
+    {
+      "id": "routing-global-context-product",
+      "configuration": "global-only",
+      "request": {"resource": "state/other"},
+      "expect": {"value": "global-product"}
+    },
+    {
+      "id": "routing-empty-selected-context-falls-to-global-context",
+      "configuration": "global-only",
+      "request": {"resource": "state/foo", "selected_context": "empty"},
+      "expect": {"value": "global-exact"}
+    },
+    {
+      "id": "routing-exact-resource-before-product",
+      "configuration": "all-levels",
+      "request": {"resource": "state/foo", "selected_context": "selected"},
+      "expect": {"value": "context-exact"}
+    },
+    {
+      "id": "routing-intermediate-prefix-does-not-match",
+      "configuration": "all-levels",
+      "request": {"resource": "state/foo/bar", "selected_context": "selected"},
+      "expect": {"value": "context-product"}
+    },
+    {
+      "id": "routing-legacy-flattened-environment-name-ignored",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state/foo",
+        "environment": {"DETERMA_STATE_FOO_CONNECTION": "environment-exact"},
+        "selected_context": "selected"
+      },
+      "expect": {"value": "context-exact"}
+    },
+    {
+      "id": "routing-product-only-environment",
+      "configuration": "all-levels",
+      "request": {
+        "resource": "state",
+        "environment": {"DETERMA_STATE_CONNECTION": "environment-product"},
+        "selected_context": "selected"
+      },
+      "expect": {"value": "environment-product"}
+    },
+    {
+      "id": "routing-no-context-no-default-unresolved",
+      "configuration": "no-fallback",
+      "request": {"resource": "state/foo"},
+      "expect": {"error": "unresolved_connection"}
+    },
+    {
+      "id": "routing-invalid-resource",
+      "configuration": "no-fallback",
+      "request": {"resource": "state/foo_bar"},
+      "expect": {"error": "invalid_name"}
+    }
+  ]
+}
