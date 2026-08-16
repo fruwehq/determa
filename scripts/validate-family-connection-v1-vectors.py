@@ -7,10 +7,9 @@ import argparse
 import ipaddress
 import json
 import re
-import subprocess
 import sys
+import unicodedata
 from dataclasses import dataclass
-from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -213,25 +212,19 @@ def validate_resource(value: Any) -> list[str]:
     return segments
 
 
-@cache
 def domain_to_ascii(host: str) -> str:
-    script = (
-        "const fs=require('node:fs');"
-        "const {domainToASCII}=require('node:url');"
-        "const value=fs.readFileSync(0,'utf8');"
-        "process.stdout.write(domainToASCII(value));"
-    )
-    try:
-        result = subprocess.run(
-            ["node", "-e", script],
-            input=host,
-            text=True,
-            capture_output=True,
-            check=True,
-        )
-    except (FileNotFoundError, subprocess.CalledProcessError) as error:
-        raise RuntimeError("Node.js is required for the committed UTS #46 vectors") from error
-    return result.stdout
+    # Avoid platform URL helpers, which may apply transitional UTS #46 processing.
+    mapped = host.translate(str.maketrans({"\u3002": ".", "\uff0e": ".", "\uff61": "."}))
+    labels: list[str] = []
+    for source_label in mapped.split("."):
+        label = unicodedata.normalize("NFC", source_label).lower()
+        if not label or any(unicodedata.category(character) == "Cs" for character in label):
+            return ""
+        if all(ord(character) < 128 for character in label):
+            labels.append(label)
+            continue
+        labels.append("xn--" + label.encode("punycode").decode("ascii"))
+    return ".".join(labels)
 
 
 def canonicalize_ipv6(address: ipaddress.IPv6Address) -> str:

@@ -65,8 +65,9 @@ From the repository root:
 python3 scripts/validate-family-connection-v1-vectors.py
 ```
 
-The validator uses only the Python and Node.js standard libraries already
-required by this umbrella repository. Node.js supplies UTS #46 processing for
-the committed Unicode 15.1 host cases; the fixture outputs remain the normative
-values. The harness independently applies the v1 strict URI, configuration,
-environment-name, and routing rules and is not shipped in any package.
+The validator uses only the Python standard library. Its test-only IDNA path
+normalizes and Punycode-encodes the committed Unicode 15.1 host cases directly,
+so platform URL helpers cannot substitute transitional processing. The fixture
+outputs remain the normative values. The harness independently applies the v1
+strict URI, configuration, environment-name, and routing rules and is not
+shipped in any package.
