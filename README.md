@@ -34,6 +34,13 @@ each one provides the same `determa` command:
 Future products slot in under the same `determa <product>` dispatch — no launcher
 change needed, they just have to be on `PATH` as `determa-<product>`.
 
+## Family configuration
+
+[Family Connection and Context Configuration v1](docs/family-connection-context-v1.md)
+reserves the language-neutral connection, context, endpoint-routing, and future
+family command contract. It is design documentation only: the current launchers
+remain local dispatchers and do not yet implement remote connections or clients.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
