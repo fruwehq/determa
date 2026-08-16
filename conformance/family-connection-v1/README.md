@@ -67,9 +67,9 @@ python3 scripts/validate-family-connection-v1-vectors.py
 
 The validator uses only the Python standard library. Its test-only IDNA path
 normalizes and Punycode-encodes only the non-ASCII scalars exercised by the
-committed positive cases and conservatively rejects every other non-ASCII host
-scalar. It does not claim to implement the complete UTS #46 data. This prevents
-platform URL helpers from substituting transitional processing while keeping
-the fixture outputs normative. The harness independently applies the v1 strict
-URI, configuration, environment-name, and routing rules and is not shipped in
-any package.
+committed positive cases, validates Punycode labels before accepting them, and
+conservatively rejects every other non-ASCII host scalar. It does not claim to
+implement the complete UTS #46 data. This prevents platform URL helpers from
+substituting transitional processing while keeping the fixture outputs
+normative. The harness independently applies the v1 strict URI, configuration,
+environment-name, and routing rules and is not shipped in any package.

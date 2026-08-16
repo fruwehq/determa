@@ -23,6 +23,11 @@
       "expect": {"value": "https://xn--fa-hia.example/"}
     },
     {
+      "id": "endpoint-idna-canonical-punycode",
+      "input": "https://XN--BCHER-KVA.example",
+      "expect": {"value": "https://xn--bcher-kva.example/"}
+    },
+    {
       "id": "endpoint-idna-unicode-separator",
       "input": "https://example。com",
       "expect": {"value": "https://example.com/"}
@@ -175,6 +180,11 @@
     {
       "id": "endpoint-invalid-idna-non-breaking-space",
       "input": "https://a\u00a0b.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-invalid-punycode",
+      "input": "https://xn--a.example/",
       "expect": {"error": "invalid_endpoint_host"}
     },
     {

@@ -227,9 +227,21 @@ def domain_to_ascii(host: str) -> str:
         label = unicodedata.normalize("NFC", source_label).lower()
         if not label or any(unicodedata.category(character) == "Cs" for character in label):
             return ""
+        if label.startswith("xn--"):
+            try:
+                label = label[4:].encode("ascii").decode("punycode")
+            except UnicodeError:
+                return ""
+            label = unicodedata.normalize("NFC", label).lower()
         if all(ord(character) < 128 for character in label):
             labels.append(label)
             continue
+        if any(
+            ord(character) >= 128
+            and character not in SUPPORTED_NON_ASCII_HOST_SCALARS
+            for character in label
+        ):
+            return ""
         labels.append("xn--" + label.encode("punycode").decode("ascii"))
     return ".".join(labels)
 
