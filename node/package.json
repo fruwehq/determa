@@ -29,7 +29,7 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "test": "node test/dispatch.test.js && node test/family-connection-context-v1.test.js"

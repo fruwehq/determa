@@ -26,6 +26,7 @@ PCHAR = frozenset(
 UNRESERVED = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
 HEX = frozenset("0123456789abcdefABCDEF")
 EXPECTED_UNICODE_VERSION = "15.1.0"
+RESERVED_FAMILY_COMMANDS = frozenset({"auth", "config", "context"})
 
 
 class FamilyConnectionError(ValueError):

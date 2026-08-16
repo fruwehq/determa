@@ -21,7 +21,8 @@ the exact Unicode 15.1 UTS #46 boundary, and declares an MSRV matching the
 maximum Rust version required by the resolved normal dependency graph. The
 Python implementation likewise pins `idna` tables plus `unicodedata2` 15.1 data
 for normalization, category, combining-class, and bidi decisions rather than
-relying on the interpreter's bundled Unicode version.
+relying on the interpreter's bundled Unicode version. The supported runtime
+floors are Python 3.11, Node 22, and Rust 1.81; CI exercises each floor.
 
 ## Principles
 

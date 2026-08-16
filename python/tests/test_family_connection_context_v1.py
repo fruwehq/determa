@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 
@@ -31,6 +32,10 @@ def assert_case(case: dict[str, Any], operation: Callable[[], Any]) -> None:
 
 def test_unicode_data_version() -> None:
     family.validate_unicode_data_version()
+
+
+def test_reserved_family_commands_are_public() -> None:
+    assert family.RESERVED_FAMILY_COMMANDS == frozenset({"auth", "config", "context"})
 
 
 def test_unicode_15_1_label_participates_in_bidi_domain() -> None:

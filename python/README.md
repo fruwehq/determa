@@ -20,9 +20,10 @@ The launcher is language-agnostic: it dispatches to whichever `determa-state` is
 `PATH`, be it the Python or the Rust build. It ships no `determa/__init__.py`, so it
 coexists cleanly with `determa.state` as a PEP 420 namespace.
 
-The package also exposes the Family Connection/Context v1 resolver APIs. The
-resolver pins `idna` and `unicodedata2` data so endpoint handling stays on the
-specified Unicode 15.1 boundary across supported Python versions.
+The package requires Python 3.11 or newer. It also exposes the Family
+Connection/Context v1 resolver APIs. The resolver pins `idna` and
+`unicodedata2` data so endpoint handling stays on the specified Unicode 15.1
+boundary across supported Python versions.
 
 ## License
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Check that rust/Cargo.toml declares the resolved normal-dependency MSRV."""
 
 from __future__ import annotations

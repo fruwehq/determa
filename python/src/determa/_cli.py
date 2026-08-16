@@ -17,8 +17,9 @@ import shutil
 import subprocess
 import sys
 
+from determa.family_connection_context_v1 import RESERVED_FAMILY_COMMANDS
+
 PREFIX = "determa-"
-RESERVED_FAMILY_COMMANDS = frozenset({"auth", "config", "context"})
 
 
 def _version() -> str:
