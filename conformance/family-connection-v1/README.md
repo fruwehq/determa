@@ -70,10 +70,12 @@ python3 scripts/validate-family-connection-v1-vectors.py
 The test-only IDNA path uses the hash-pinned `idna==3.7` tables generated from
 the official [Unicode 15.1.0 IDNA mapping table](https://www.unicode.org/Public/idna/15.1.0/IdnaMappingTable.txt).
 The harness verifies at startup that both the package's IDNA and UTS #46 data
-report exactly Unicode 15.1.0, then applies nontransitional UTS #46 processing
-with STD3, hyphen, bidi, joiner, and DNS-length checks. The vectors include
-normalization-equivalent labels, Unicode-version boundaries, and a valid
-ContextJ/bidi label so an implementation that rejects all non-ASCII input
-cannot pass. The harness independently applies the remaining v1 strict URI,
-configuration, environment-name, and routing rules and is not shipped in any
-launcher package.
+report exactly Unicode 15.1.0 and that the Python runtime supplies Unicode data
+at least as new as 15.1.0. It then applies nontransitional UTS #46 processing
+with STD3, hyphen, bidi, joiner, and DNS-length checks. The exact 15.1 IDNA
+tables remain authoritative when a later Python runtime knows newer code
+points. The vectors include normalization-equivalent labels, Unicode-version
+boundaries, and a valid ContextJ/bidi label so an implementation that rejects
+all non-ASCII input cannot pass. The harness independently applies the
+remaining v1 strict URI, configuration, environment-name, and routing rules and
+is not shipped in any launcher package.

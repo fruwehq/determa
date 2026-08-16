@@ -8,6 +8,7 @@ import ipaddress
 import json
 import re
 import sys
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -238,6 +239,14 @@ def validate_unicode_data_version() -> None:
         raise RuntimeError(
             "IDNA tables must both use Unicode "
             f"{EXPECTED_UNICODE_VERSION}, got {sorted(versions)}"
+        )
+    runtime_version = tuple(
+        int(part) for part in unicodedata.unidata_version.split(".")
+    )
+    if runtime_version < (15, 1, 0):
+        raise RuntimeError(
+            "runtime Unicode data must be at least 15.1.0, got "
+            f"{unicodedata.unidata_version}"
         )
 
 
