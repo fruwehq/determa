@@ -18,6 +18,7 @@ import subprocess
 import sys
 
 PREFIX = "determa-"
+RESERVED_FAMILY_COMMANDS = frozenset({"auth", "config", "context"})
 
 
 def _version() -> str:
@@ -147,6 +148,11 @@ def main(argv: list[str] | None = None) -> int:
         for product, impls in _discover().items():
             print(_format_product(product, impls))
         return 0
+    if args[0] in RESERVED_FAMILY_COMMANDS:
+        sys.stderr.write(
+            f"determa: family command '{args[0]}' is reserved but not implemented yet.\n"
+        )
+        return 2
 
     sub, rest = args[0], args[1:]
     exe = _exe_for(sub)

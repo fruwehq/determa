@@ -10,10 +10,14 @@ implemented.
 The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHOULD**, **SHOULD NOT**,
 and **MAY** are to be interpreted as described in RFC 2119 and RFC 8174.
 
-This is a design contract only. Current Python, Rust, and Node `determa`
-launchers do not read this configuration and retain their existing behavior.
-It does not define a configuration-file location, credential store, network
-protocol, server, client, or State machine/checkpoint format.
+Current Python, Rust, and Node `determa` packages implement this contract as
+local resolver APIs and reserve the family command names below before product
+dispatch. They do not discover or read a configuration file and do not perform
+remote transport. This document does not define a configuration-file location,
+credential store, network protocol, server, client, or State machine/checkpoint
+format. The Rust implementation uses exact behavior-relevant ICU data
+dependencies and a checked lockfile because the v1 endpoint profile depends on
+the exact Unicode 15.1 UTS #46 boundary.
 
 ## Principles
 
@@ -314,15 +318,18 @@ variable for selecting a context.
 ## Command namespace reservation
 
 The family-level command names `config`, `context`, and `auth` are reserved.
-No present or future product may claim those names, and each future Python,
-Rust, and Node launcher implementation MUST recognize them before product
-dispatch. Their commands, flags, output, and persistence behavior are not
-implemented or specified here.
+No present or future product may claim those names, and each Python, Rust, and
+Node launcher implementation MUST recognize them before product dispatch. Their
+subcommands, flags, output, and persistence behavior are not implemented or
+specified here.
 
-This reservation does not change current launcher behavior. In particular,
-this document does not add a parser, help entry, executable command, or
-compatibility promise for `determa config`, `determa context`, or `determa auth`
-until a later implementation release changes all three launchers together.
+Until command syntax is specified, invoking `determa config`, `determa context`,
+or `determa auth` MUST fail locally before product dispatch with exit status
+`2`, empty stdout, and stderr exactly:
+
+```text
+determa: family command '<command>' is reserved but not implemented yet.
+```
 
 ## Local implementation selection and State storage
 

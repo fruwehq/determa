@@ -18,12 +18,18 @@ struct StubPath {
 
 impl StubPath {
     fn new() -> Self {
-        Self { dir: TempDir::new().unwrap() }
+        Self {
+            dir: TempDir::new().unwrap(),
+        }
     }
 
     fn add(&self, name: &str, marker: &str) {
         let path = self.dir.path().join(name);
-        fs::write(&path, format!("#!/bin/sh\necho \"ran:{marker}: $*\"\nexit 0\n")).unwrap();
+        fs::write(
+            &path,
+            format!("#!/bin/sh\necho \"ran:{marker}: $*\"\nexit 0\n"),
+        )
+        .unwrap();
         let mut perms = fs::metadata(&path).unwrap().permissions();
         perms.set_mode(0o755);
         fs::set_permissions(&path, perms).unwrap();
@@ -80,6 +86,21 @@ fn unknown_product_exits_127() {
 }
 
 #[test]
+fn reserved_family_commands_exit_2_before_dispatch() {
+    for command in ["auth", "config", "context"] {
+        let sp = StubPath::new();
+        sp.add(&format!("determa-{command}"), "must-not-run");
+        let (rc, out, err) = run(&[command], &sp.path_env(), &[]);
+        assert_eq!(rc, 2);
+        assert_eq!(out, "");
+        assert_eq!(
+            err,
+            format!("determa: family command '{command}' is reserved but not implemented yet.\n")
+        );
+    }
+}
+
+#[test]
 fn dispatches_to_canonical_and_propagates_exit() {
     let sp = StubPath::new();
     sp.add("determa-echo", "echo-product");
@@ -89,7 +110,9 @@ fn dispatches_to_canonical_and_propagates_exit() {
 
     sp.add("determa-boom", "boom");
     fs::write(sp.dir.path().join("determa-boom"), "#!/bin/sh\nexit 3\n").unwrap();
-    let mut perms = fs::metadata(sp.dir.path().join("determa-boom")).unwrap().permissions();
+    let mut perms = fs::metadata(sp.dir.path().join("determa-boom"))
+        .unwrap()
+        .permissions();
     perms.set_mode(0o755);
     fs::set_permissions(sp.dir.path().join("determa-boom"), perms).unwrap();
     let (rc, _, _) = run(&["boom"], &sp.path_env(), &[]);
@@ -100,7 +123,11 @@ fn dispatches_to_canonical_and_propagates_exit() {
 fn dispatch_prefers_impl_env_var() {
     let sp = StubPath::new();
     make_state_stubs(&sp);
-    let (rc, out, _) = run(&["state", "--version"], &sp.path_env(), &[("DETERMA_STATE_IMPL", "rust")]);
+    let (rc, out, _) = run(
+        &["state", "--version"],
+        &sp.path_env(),
+        &[("DETERMA_STATE_IMPL", "rust")],
+    );
     assert_eq!(rc, 0);
     assert!(out.contains("ran:rust: --version"), "{out}");
 }
@@ -118,7 +145,11 @@ fn dispatch_env_var_unset_uses_canonical() {
 fn dispatch_impl_missing_falls_back_to_canonical() {
     let sp = StubPath::new();
     sp.add("determa-state", "canonical"); // no suffixed stubs present
-    let (rc, out, _) = run(&["state", "ping"], &sp.path_env(), &[("DETERMA_STATE_IMPL", "rust")]);
+    let (rc, out, _) = run(
+        &["state", "ping"],
+        &sp.path_env(),
+        &[("DETERMA_STATE_IMPL", "rust")],
+    );
     assert_eq!(rc, 0);
     assert!(out.contains("ran:canonical: ping"), "{out}");
 }

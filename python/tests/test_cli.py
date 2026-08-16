@@ -32,6 +32,22 @@ def test_unknown_product_exits_127(capsys):
     assert "not found on PATH" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("command", ["auth", "config", "context"])
+def test_reserved_family_command_exits_2(command, tmp_path, monkeypatch, capsys):
+    exe = tmp_path / f"determa-{command}"
+    exe.write_text('#!/bin/sh\necho "must-not-run"\nexit 0\n')
+    exe.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ.get("PATH", ""))
+
+    assert cli.main([command]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert (
+        captured.err
+        == f"determa: family command '{command}' is reserved but not implemented yet.\n"
+    )
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="uses a POSIX shell stub")
 def test_dispatches_to_product_on_path(tmp_path, monkeypatch, capfd):
     exe = tmp_path / "determa-echo"

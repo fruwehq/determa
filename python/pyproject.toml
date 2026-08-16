@@ -19,6 +19,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Topic :: Software Development",
 ]
+dependencies = ["idna==3.10"]
 
 [project.optional-dependencies]
 # Convenience installs: `pip install "determa[state]"` gets the launcher + the
@@ -39,7 +40,10 @@ determa = "determa._cli:main"
 # with determa-state's `determa.state` package. Ship only the launcher module.
 [tool.hatch.build.targets.wheel]
 sources = ["src"]
-only-include = ["src/determa/_cli.py"]
+only-include = [
+  "src/determa/_cli.py",
+  "src/determa/family_connection_context_v1.py",
+]
 
 [tool.ruff]
 line-length = 100

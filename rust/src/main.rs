@@ -15,6 +15,8 @@ use std::env;
 use std::fs;
 use std::process::{exit, Command};
 
+use determa::family_connection_context_v1::RESERVED_FAMILY_COMMANDS;
+
 const PREFIX: &str = "determa-";
 
 fn version() -> &'static str {
@@ -143,6 +145,10 @@ fn main() {
             for (product, impls) in discover() {
                 println!("{}", format_product(&product, &impls));
             }
+        }
+        Some(sub) if RESERVED_FAMILY_COMMANDS.contains(&sub) => {
+            eprintln!("determa: family command '{sub}' is reserved but not implemented yet.");
+            exit(2);
         }
         Some(sub) => match exe_for(sub) {
             Some(exe) => match Command::new(&exe).args(&args[1..]).status() {

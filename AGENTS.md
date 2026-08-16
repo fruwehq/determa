@@ -51,7 +51,7 @@ cd python && pip install -e '.[dev]' && ruff check . && pytest -q
 # rust
 cd rust && cargo build --release && cargo clippy --release --all-targets -- -D warnings && cargo test
 # node
-cd node && node test/dispatch.test.js
+cd node && npm ci && npm test
 ```
 Note: unlike `determa-state-rust`, the rust launcher **does** enforce `clippy -D warnings` in CI — keep it clean.
 

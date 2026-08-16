@@ -11,6 +11,7 @@
 const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const { RESERVED_FAMILY_COMMANDS } = require("../lib/family-connection-context-v1");
 
 const PREFIX = "determa-";
 const VERSION = require("../package.json").version;
@@ -149,6 +150,10 @@ function main(argv) {
   if (cmd === "list") {
     discover().forEach(([p, i]) => console.log(formatProduct(p, i)));
     return 0;
+  }
+  if (RESERVED_FAMILY_COMMANDS.has(cmd)) {
+    process.stderr.write(`determa: family command '${cmd}' is reserved but not implemented yet.\n`);
+    return 2;
   }
   const exe = exeFor(cmd);
   if (!exe) {

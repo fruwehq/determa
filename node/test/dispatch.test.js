@@ -28,6 +28,20 @@ r = run(["definitely-not-real"]);
 assert.strictEqual(r.status, 127);
 assert.ok(r.stderr.includes("not found on PATH"));
 
+for (const command of ["auth", "config", "context"]) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "determa-reserved-"));
+  const stub = path.join(dir, `determa-${command}`);
+  fs.writeFileSync(stub, '#!/bin/sh\necho "must-not-run"\nexit 0\n');
+  fs.chmodSync(stub, 0o755);
+  r = run([command], { PATH: dir + path.delimiter + process.env.PATH });
+  assert.strictEqual(r.status, 2);
+  assert.strictEqual(r.stdout, "");
+  assert.strictEqual(
+    r.stderr,
+    `determa: family command '${command}' is reserved but not implemented yet.\n`
+  );
+}
+
 if (process.platform !== "win32") {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "determa-test-"));
   const stub = path.join(dir, "determa-echo");

@@ -2,6 +2,7 @@
 name = "determa"
 version = "0.2.0"
 edition = "2021"
+rust-version = "1.67"
 authors = ["fruwehq"]
 license = "MIT"
 description = "Umbrella launcher for the Determa family — git-style dispatch to determa-<product> commands"
@@ -13,6 +14,16 @@ categories = ["command-line-utilities"]
 [[bin]]
 name = "determa"
 path = "src/main.rs"
+
+[dependencies]
+icu_normalizer = "=1.5.0"
+icu_normalizer_data = "=1.5.1"
+icu_properties = "=1.5.1"
+icu_properties_data = "=1.5.1"
+idna = "=1.1.0"
+idna_adapter = "=1.2.0"
+serde = "1"
+serde_json = "1"
 
 [dev-dependencies]
 tempfile = "3"
