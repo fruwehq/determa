@@ -41,6 +41,10 @@ reserves the language-neutral connection, context, endpoint-routing, and future
 family command contract. It is design documentation only: the current launchers
 remain local dispatchers and do not yet implement remote connections or clients.
 
+The machine-readable [v1 conformance vectors](conformance/family-connection-v1/)
+fix the expected configuration, endpoint, environment-name, and routing results
+without adding those behaviors to the launchers.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

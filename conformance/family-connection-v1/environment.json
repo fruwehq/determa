@@ -1,0 +1,85 @@
+{
+  "contract": "family-connection-context-v1",
+  "suite": "environment",
+  "distinct_sets": [
+    ["environment-hyphen", "environment-segment-boundary", "environment-double-hyphen"],
+    ["environment-product-hyphen", "environment-product-segment-boundary"]
+  ],
+  "cases": [
+    {
+      "id": "environment-product",
+      "resource": "state",
+      "expect": {"value": "DETERMA_STATE_CONNECTION"}
+    },
+    {
+      "id": "environment-resource",
+      "resource": "state/instances",
+      "expect": {"value": "DETERMA_STATE__INSTANCES_CONNECTION"}
+    },
+    {
+      "id": "environment-hyphen",
+      "resource": "state/foo-bar",
+      "expect": {"value": "DETERMA_STATE__FOO_HBAR_CONNECTION"}
+    },
+    {
+      "id": "environment-segment-boundary",
+      "resource": "state/foo/bar",
+      "expect": {"value": "DETERMA_STATE__FOO__BAR_CONNECTION"}
+    },
+    {
+      "id": "environment-double-hyphen",
+      "resource": "state/foo--bar",
+      "expect": {"value": "DETERMA_STATE__FOO_H_HBAR_CONNECTION"}
+    },
+    {
+      "id": "environment-product-hyphen",
+      "resource": "state-machine/foo",
+      "expect": {"value": "DETERMA_STATE_HMACHINE__FOO_CONNECTION"}
+    },
+    {
+      "id": "environment-product-segment-boundary",
+      "resource": "state/machine/foo",
+      "expect": {"value": "DETERMA_STATE__MACHINE__FOO_CONNECTION"}
+    },
+    {
+      "id": "environment-digits",
+      "resource": "ledger2/account-3",
+      "expect": {"value": "DETERMA_LEDGER2__ACCOUNT_H3_CONNECTION"}
+    },
+    {
+      "id": "environment-empty-resource",
+      "resource": "",
+      "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "environment-uppercase-resource",
+      "resource": "State",
+      "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "environment-underscore-resource",
+      "resource": "state/foo_bar",
+      "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "environment-leading-digit-segment",
+      "resource": "state/2fa",
+      "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "environment-empty-segment",
+      "resource": "state//instances",
+      "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "environment-trailing-separator",
+      "resource": "state/",
+      "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "environment-resource-not-string",
+      "resource": null,
+      "expect": {"error": "invalid_type"}
+    }
+  ]
+}

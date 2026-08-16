@@ -1,0 +1,341 @@
+{
+  "contract": "family-connection-context-v1",
+  "suite": "endpoints",
+  "cases": [
+    {
+      "id": "endpoint-root-empty-path",
+      "input": "https://EXAMPLE.com",
+      "expect": {"value": "https://example.com/"}
+    },
+    {
+      "id": "endpoint-idna-dot-percent-default-port",
+      "input": "HTTPS://bücher.example:443/a/./b/%7euser/",
+      "expect": {"value": "https://xn--bcher-kva.example/a/b/~user"}
+    },
+    {
+      "id": "endpoint-idna-nfd-equivalent",
+      "input": "https://bu\u0308cher.example",
+      "expect": {"value": "https://xn--bcher-kva.example/"}
+    },
+    {
+      "id": "endpoint-idna-sharp-s",
+      "input": "https://faß.example",
+      "expect": {"value": "https://xn--fa-hia.example/"}
+    },
+    {
+      "id": "endpoint-idna-capital-sharp-s",
+      "input": "https://faẞ.example",
+      "expect": {"value": "https://xn--fa-hia.example/"}
+    },
+    {
+      "id": "endpoint-idna-canonical-punycode",
+      "input": "https://XN--BCHER-KVA.example",
+      "expect": {"value": "https://xn--bcher-kva.example/"}
+    },
+    {
+      "id": "endpoint-idna-unicode-separator",
+      "input": "https://example。com",
+      "expect": {"value": "https://example.com/"}
+    },
+    {
+      "id": "endpoint-idna-unicode-15-1-new-codepoint",
+      "input": "https://\ud87a\udff0.example",
+      "expect": {"value": "https://xn--8g0n.example/"}
+    },
+    {
+      "id": "endpoint-idna-valid-nv8",
+      "input": "https://☕.example/",
+      "expect": {"value": "https://xn--53h.example/"}
+    },
+    {
+      "id": "endpoint-idna-valid-contextj-bidi",
+      "input": "https://\u0646\u0627\u0645\u0647\u200c\u0627\u06cc.example",
+      "expect": {"value": "https://xn--mgba3gch31f060k.example/"}
+    },
+    {
+      "id": "endpoint-custom-port-repeated-slashes",
+      "input": "https://example.com:8443/a//b/",
+      "expect": {"value": "https://example.com:8443/a//b"}
+    },
+    {
+      "id": "endpoint-encoded-dot-and-reserved",
+      "input": "https://example.com/a/%2E%2E/b/%3a",
+      "expect": {"value": "https://example.com/b/%3A"}
+    },
+    {
+      "id": "endpoint-unreserved-percent-decoded",
+      "input": "https://example.com/%41/%7a/%7E",
+      "expect": {"value": "https://example.com/A/z/~"}
+    },
+    {
+      "id": "endpoint-encoded-space-preserved",
+      "input": "https://example.com/a%20b",
+      "expect": {"value": "https://example.com/a%20b"}
+    },
+    {
+      "id": "endpoint-all-slashes-become-root",
+      "input": "https://example.com////",
+      "expect": {"value": "https://example.com/"}
+    },
+    {
+      "id": "endpoint-http-localhost",
+      "input": "HTTP://LOCALHOST:80",
+      "expect": {"value": "http://localhost/"}
+    },
+    {
+      "id": "endpoint-http-ipv4-loopback",
+      "input": "http://127.0.0.1:80",
+      "expect": {"value": "http://127.0.0.1/"}
+    },
+    {
+      "id": "endpoint-http-ipv4-loopback-range",
+      "input": "http://127.255.255.255:8080/a",
+      "expect": {"value": "http://127.255.255.255:8080/a"}
+    },
+    {
+      "id": "endpoint-https-ipv4",
+      "input": "https://192.0.2.1:443/api/",
+      "expect": {"value": "https://192.0.2.1/api"}
+    },
+    {
+      "id": "endpoint-http-ipv6-loopback",
+      "input": "http://[0:0:0:0:0:0:0:1]:8080/a/..",
+      "expect": {"value": "http://[::1]:8080/"}
+    },
+    {
+      "id": "endpoint-ipv6-first-longest-zero-run",
+      "input": "https://[2001:0:0:1:0:0:1:1]",
+      "expect": {"value": "https://[2001::1:0:0:1:1]/"}
+    },
+    {
+      "id": "endpoint-ipv4-embedded-ipv6-pure-hex",
+      "input": "https://[::ffff:192.0.2.1]",
+      "expect": {"value": "https://[::ffff:c000:201]/"}
+    },
+    {
+      "id": "endpoint-dns-label-63-bytes",
+      "input": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example",
+      "expect": {"value": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example/"}
+    },
+    {
+      "id": "endpoint-dns-domain-253-bytes",
+      "input": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "expect": {"value": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd/"}
+    },
+    {
+      "id": "endpoint-input-not-string",
+      "input": null,
+      "expect": {"error": "invalid_endpoint_type"}
+    },
+    {
+      "id": "endpoint-empty",
+      "input": "",
+      "expect": {"error": "invalid_endpoint_syntax"}
+    },
+    {
+      "id": "endpoint-leading-space",
+      "input": " https://example.com",
+      "expect": {"error": "invalid_endpoint_characters"}
+    },
+    {
+      "id": "endpoint-control-character",
+      "input": "https://example.com/\u0009path",
+      "expect": {"error": "invalid_endpoint_characters"}
+    },
+    {
+      "id": "endpoint-backslash",
+      "input": "https://example.com\\path",
+      "expect": {"error": "invalid_endpoint_characters"}
+    },
+    {
+      "id": "endpoint-relative",
+      "input": "example.com",
+      "expect": {"error": "invalid_endpoint_syntax"}
+    },
+    {
+      "id": "endpoint-opaque",
+      "input": "https:example.com",
+      "expect": {"error": "invalid_endpoint_syntax"}
+    },
+    {
+      "id": "endpoint-unsupported-scheme",
+      "input": "ftp://example.com/",
+      "expect": {"error": "unsupported_endpoint_scheme"}
+    },
+    {
+      "id": "endpoint-empty-host",
+      "input": "https:///path",
+      "expect": {"error": "invalid_endpoint_authority"}
+    },
+    {
+      "id": "endpoint-user-info",
+      "input": "https://user@example.com/",
+      "expect": {"error": "invalid_endpoint_authority"}
+    },
+    {
+      "id": "endpoint-query",
+      "input": "https://example.com/?x=1",
+      "expect": {"error": "invalid_endpoint_syntax"}
+    },
+    {
+      "id": "endpoint-fragment",
+      "input": "https://example.com/#x",
+      "expect": {"error": "invalid_endpoint_syntax"}
+    },
+    {
+      "id": "endpoint-percent-encoded-host",
+      "input": "https://exa%6dple.com/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-root-dot-host",
+      "input": "https://example.com./",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-empty-host-label",
+      "input": "https://example..com/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-invalid-idna-label",
+      "input": "https://-bad.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-invalid-idna-hyphen-positions-three-four",
+      "input": "https://ab--cd.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-invalid-idna-zero-width-joiner",
+      "input": "https://a\u200db.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-invalid-idna-non-breaking-space",
+      "input": "https://a\u00a0b.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-invalid-punycode",
+      "input": "https://xn--a.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-idna-unicode-16-codepoint-disallowed-in-15-1",
+      "input": "https://\u1c8a.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-dns-label-64-bytes",
+      "input": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-dns-domain-254-bytes",
+      "input": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-short-ipv4",
+      "input": "https://127.1/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-leading-zero-ipv4",
+      "input": "https://0177.0.0.1/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-hex-ipv4",
+      "input": "https://0x7f000001/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-ipv4-out-of-range",
+      "input": "https://256.0.0.1/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-unbracketed-ipv6",
+      "input": "https://2001:db8::1/",
+      "expect": {"error": "invalid_endpoint_authority"}
+    },
+    {
+      "id": "endpoint-ipv6-zone",
+      "input": "http://[fe80::1%25en0]/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-ipvfuture",
+      "input": "https://[v1.example]/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-empty-port",
+      "input": "https://example.com:/",
+      "expect": {"error": "invalid_endpoint_port"}
+    },
+    {
+      "id": "endpoint-leading-zero-port",
+      "input": "https://example.com:0443/",
+      "expect": {"error": "invalid_endpoint_port"}
+    },
+    {
+      "id": "endpoint-zero-port",
+      "input": "https://example.com:0/",
+      "expect": {"error": "invalid_endpoint_port"}
+    },
+    {
+      "id": "endpoint-out-of-range-port",
+      "input": "https://example.com:65536/",
+      "expect": {"error": "invalid_endpoint_port"}
+    },
+    {
+      "id": "endpoint-encoded-slash",
+      "input": "https://example.com/%2f",
+      "expect": {"error": "invalid_endpoint_path"}
+    },
+    {
+      "id": "endpoint-encoded-backslash",
+      "input": "https://example.com/%5C",
+      "expect": {"error": "invalid_endpoint_path"}
+    },
+    {
+      "id": "endpoint-encoded-non-ascii",
+      "input": "https://example.com/%C3%A9",
+      "expect": {"error": "invalid_endpoint_path"}
+    },
+    {
+      "id": "endpoint-encoded-control",
+      "input": "https://example.com/%00",
+      "expect": {"error": "invalid_endpoint_path"}
+    },
+    {
+      "id": "endpoint-malformed-percent",
+      "input": "https://example.com/%2",
+      "expect": {"error": "invalid_endpoint_path"}
+    },
+    {
+      "id": "endpoint-raw-unicode-path",
+      "input": "https://example.com/café",
+      "expect": {"error": "invalid_endpoint_path"}
+    },
+    {
+      "id": "endpoint-http-non-loopback-host",
+      "input": "http://example.com/",
+      "expect": {"error": "insecure_endpoint"}
+    },
+    {
+      "id": "endpoint-http-non-loopback-ipv4",
+      "input": "http://192.0.2.1/",
+      "expect": {"error": "insecure_endpoint"}
+    },
+    {
+      "id": "endpoint-http-mapped-loopback-is-not-ipv6-loopback",
+      "input": "http://[::ffff:127.0.0.1]/",
+      "expect": {"error": "insecure_endpoint"}
+    }
+  ]
+}
