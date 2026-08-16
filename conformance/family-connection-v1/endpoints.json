@@ -13,6 +13,11 @@
       "expect": {"value": "https://xn--bcher-kva.example/a/b/~user"}
     },
     {
+      "id": "endpoint-idna-nfd-equivalent",
+      "input": "https://bu\u0308cher.example",
+      "expect": {"value": "https://xn--bcher-kva.example/"}
+    },
+    {
       "id": "endpoint-idna-sharp-s",
       "input": "https://faß.example",
       "expect": {"value": "https://xn--fa-hia.example/"}
@@ -31,6 +36,16 @@
       "id": "endpoint-idna-unicode-separator",
       "input": "https://example。com",
       "expect": {"value": "https://example.com/"}
+    },
+    {
+      "id": "endpoint-idna-unicode-15-1-new-codepoint",
+      "input": "https://\ud87a\udff0.example",
+      "expect": {"value": "https://xn--8g0n.example/"}
+    },
+    {
+      "id": "endpoint-idna-valid-contextj-bidi",
+      "input": "https://\u0646\u0627\u0645\u0647\u200c\u0627\u06cc.example",
+      "expect": {"value": "https://xn--mgba3gch31f060k.example/"}
     },
     {
       "id": "endpoint-custom-port-repeated-slashes",
@@ -91,6 +106,16 @@
       "id": "endpoint-ipv4-embedded-ipv6-pure-hex",
       "input": "https://[::ffff:192.0.2.1]",
       "expect": {"value": "https://[::ffff:c000:201]/"}
+    },
+    {
+      "id": "endpoint-dns-label-63-bytes",
+      "input": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example",
+      "expect": {"value": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example/"}
+    },
+    {
+      "id": "endpoint-dns-domain-253-bytes",
+      "input": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "expect": {"value": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd/"}
     },
     {
       "id": "endpoint-input-not-string",
@@ -173,6 +198,11 @@
       "expect": {"error": "invalid_endpoint_host"}
     },
     {
+      "id": "endpoint-invalid-idna-hyphen-positions-three-four",
+      "input": "https://ab--cd.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
       "id": "endpoint-invalid-idna-zero-width-joiner",
       "input": "https://a\u200db.example/",
       "expect": {"error": "invalid_endpoint_host"}
@@ -185,6 +215,21 @@
     {
       "id": "endpoint-invalid-punycode",
       "input": "https://xn--a.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-idna-unicode-16-codepoint-disallowed-in-15-1",
+      "input": "https://\u1c8a.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-dns-label-64-bytes",
+      "input": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-dns-domain-254-bytes",
+      "input": "https://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd/",
       "expect": {"error": "invalid_endpoint_host"}
     },
     {

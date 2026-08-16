@@ -258,6 +258,21 @@
       "id": "config-invalid-json-source",
       "source": "{\"version\":1,",
       "expect": {"error": "invalid_source"}
+    },
+    {
+      "id": "config-nan-source",
+      "source": "{\"version\":NaN,\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "invalid_source"}
+    },
+    {
+      "id": "config-positive-infinity-source",
+      "source": "{\"version\":Infinity,\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "invalid_source"}
+    },
+    {
+      "id": "config-negative-infinity-source",
+      "source": "{\"version\":-Infinity,\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "invalid_source"}
     }
   ]
 }

@@ -8,10 +8,12 @@ import ipaddress
 import json
 import re
 import sys
-import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+import idna
+from idna import idnadata, uts46data
 
 ROOT = Path(__file__).resolve().parents[1]
 VECTOR_ROOT = ROOT / "conformance" / "family-connection-v1"
@@ -31,7 +33,7 @@ UNRESERVED = frozenset(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
 )
 HEX = frozenset("0123456789abcdefABCDEF")
-SUPPORTED_NON_ASCII_HOST_SCALARS = frozenset("üÜßẞ")
+EXPECTED_UNICODE_VERSION = "15.1.0"
 ERROR_CODES = frozenset(
     {
         "duplicate_key",
@@ -84,6 +86,10 @@ def reject_duplicate_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
+def reject_nonfinite_constant(_value: str) -> Any:
+    raise VectorError("invalid_source")
+
+
 def parse_configuration_source(source: Any) -> dict[str, Any]:
     if not isinstance(source, str):
         raise VectorError("invalid_source")
@@ -93,6 +99,7 @@ def parse_configuration_source(source: Any) -> dict[str, Any]:
             object_pairs_hook=reject_duplicate_pairs,
             parse_int=IntegerToken,
             parse_float=NonIntegerNumberToken,
+            parse_constant=reject_nonfinite_constant,
         )
     except VectorError:
         raise
@@ -214,36 +221,24 @@ def validate_resource(value: Any) -> list[str]:
 
 
 def domain_to_ascii(host: str) -> str:
-    # Cover only the committed positive scalars. Rejecting everything else keeps
-    # this fixture harness from approximating the contract's complete UTS #46 data.
-    mapped = host.translate(str.maketrans({"\u3002": ".", "\uff0e": ".", "\uff61": "."}))
-    if any(
-        ord(character) >= 128 and character not in SUPPORTED_NON_ASCII_HOST_SCALARS
-        for character in mapped
-    ):
+    try:
+        return idna.encode(
+            host,
+            uts46=True,
+            transitional=False,
+            std3_rules=True,
+        ).decode("ascii")
+    except idna.IDNAError:
         return ""
-    labels: list[str] = []
-    for source_label in mapped.split("."):
-        label = unicodedata.normalize("NFC", source_label).lower()
-        if not label or any(unicodedata.category(character) == "Cs" for character in label):
-            return ""
-        if label.startswith("xn--"):
-            try:
-                label = label[4:].encode("ascii").decode("punycode")
-            except UnicodeError:
-                return ""
-            label = unicodedata.normalize("NFC", label).lower()
-        if all(ord(character) < 128 for character in label):
-            labels.append(label)
-            continue
-        if any(
-            ord(character) >= 128
-            and character not in SUPPORTED_NON_ASCII_HOST_SCALARS
-            for character in label
-        ):
-            return ""
-        labels.append("xn--" + label.encode("punycode").decode("ascii"))
-    return ".".join(labels)
+
+
+def validate_unicode_data_version() -> None:
+    versions = {idnadata.__version__, uts46data.__version__}
+    if versions != {EXPECTED_UNICODE_VERSION}:
+        raise RuntimeError(
+            "IDNA tables must both use Unicode "
+            f"{EXPECTED_UNICODE_VERSION}, got {sorted(versions)}"
+        )
 
 
 def canonicalize_ipv6(address: ipaddress.IPv6Address) -> str:
@@ -579,6 +574,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", action="store_true")
     arguments = parser.parse_args()
+    validate_unicode_data_version()
     seen_ids: set[str] = set()
     passed = 0
 

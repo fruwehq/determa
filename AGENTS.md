@@ -43,6 +43,7 @@ that ties the family together and reserves the `determa` name on every registry.
 ## Gates (`ci.yml` runs the family vectors and all three launchers)
 ```sh
 # family connection/context vectors
+python3 -m pip install --require-hashes -r scripts/requirements-family-connection-v1-vectors.txt
 python3 scripts/validate-family-connection-v1-vectors.py
 
 # python

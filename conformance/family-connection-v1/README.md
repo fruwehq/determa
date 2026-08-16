@@ -33,7 +33,7 @@ exactly one of:
 | code | meaning |
 |---|---|
 | `duplicate_key` | a source object repeats a key before model construction |
-| `invalid_source` | source JSON is malformed or unavailable as a string |
+| `invalid_source` | source JSON is malformed, unavailable as a string, or contains a non-JSON numeric constant |
 | `missing_field` | a required closed-model field is absent |
 | `unknown_field` | a closed-model object contains an undeclared field |
 | `invalid_type` | a value has a type not accepted at that location |
@@ -62,14 +62,18 @@ contract requires its own specification and conformance work.
 From the repository root:
 
 ```sh
+python3 -m pip install --require-hashes \
+  -r scripts/requirements-family-connection-v1-vectors.txt
 python3 scripts/validate-family-connection-v1-vectors.py
 ```
 
-The validator uses only the Python standard library. Its test-only IDNA path
-normalizes and Punycode-encodes only the non-ASCII scalars exercised by the
-committed positive cases, validates Punycode labels before accepting them, and
-conservatively rejects every other non-ASCII host scalar. It does not claim to
-implement the complete UTS #46 data. This prevents platform URL helpers from
-substituting transitional processing while keeping the fixture outputs
-normative. The harness independently applies the v1 strict URI, configuration,
-environment-name, and routing rules and is not shipped in any package.
+The test-only IDNA path uses the hash-pinned `idna==3.7` tables generated from
+the official [Unicode 15.1.0 IDNA mapping table](https://www.unicode.org/Public/idna/15.1.0/IdnaMappingTable.txt).
+The harness verifies at startup that both the package's IDNA and UTS #46 data
+report exactly Unicode 15.1.0, then applies nontransitional UTS #46 processing
+with STD3, hyphen, bidi, joiner, and DNS-length checks. The vectors include
+normalization-equivalent labels, Unicode-version boundaries, and a valid
+ContextJ/bidi label so an implementation that rejects all non-ASCII input
+cannot pass. The harness independently applies the remaining v1 strict URI,
+configuration, environment-name, and routing rules and is not shipped in any
+launcher package.
