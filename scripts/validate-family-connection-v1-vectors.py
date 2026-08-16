@@ -31,6 +31,7 @@ UNRESERVED = frozenset(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
 )
 HEX = frozenset("0123456789abcdefABCDEF")
+SUPPORTED_NON_ASCII_HOST_SCALARS = frozenset("üÜßẞ")
 ERROR_CODES = frozenset(
     {
         "duplicate_key",
@@ -213,8 +214,14 @@ def validate_resource(value: Any) -> list[str]:
 
 
 def domain_to_ascii(host: str) -> str:
-    # Avoid platform URL helpers, which may apply transitional UTS #46 processing.
+    # Cover only the committed positive scalars. Rejecting everything else keeps
+    # this fixture harness from approximating the contract's complete UTS #46 data.
     mapped = host.translate(str.maketrans({"\u3002": ".", "\uff0e": ".", "\uff61": "."}))
+    if any(
+        ord(character) >= 128 and character not in SUPPORTED_NON_ASCII_HOST_SCALARS
+        for character in mapped
+    ):
+        return ""
     labels: list[str] = []
     for source_label in mapped.split("."):
         label = unicodedata.normalize("NFC", source_label).lower()

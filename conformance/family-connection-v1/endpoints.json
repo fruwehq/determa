@@ -168,6 +168,16 @@
       "expect": {"error": "invalid_endpoint_host"}
     },
     {
+      "id": "endpoint-invalid-idna-zero-width-joiner",
+      "input": "https://a\u200db.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
+      "id": "endpoint-invalid-idna-non-breaking-space",
+      "input": "https://a\u00a0b.example/",
+      "expect": {"error": "invalid_endpoint_host"}
+    },
+    {
       "id": "endpoint-short-ipv4",
       "input": "https://127.1/",
       "expect": {"error": "invalid_endpoint_host"}
