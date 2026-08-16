@@ -17,7 +17,11 @@ remote transport. This document does not define a configuration-file location,
 credential store, network protocol, server, client, or State machine/checkpoint
 format. The Rust implementation uses exact behavior-relevant ICU data
 dependencies and a checked lockfile because the v1 endpoint profile depends on
-the exact Unicode 15.1 UTS #46 boundary.
+the exact Unicode 15.1 UTS #46 boundary, and declares an MSRV matching the
+maximum Rust version required by the resolved normal dependency graph. The
+Python implementation likewise pins `idna` tables plus `unicodedata2` 15.1 data
+for normalization, category, combining-class, and bidi decisions rather than
+relying on the interpreter's bundled Unicode version.
 
 ## Principles
 

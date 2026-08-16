@@ -48,12 +48,38 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust
+      - name: MSRV metadata
+        run: python3 ../scripts/check-rust-msrv.py .
       - name: Build
-        run: cargo build --release
+        run: cargo build --release --locked
       - name: Clippy
-        run: cargo clippy --release --all-targets -- -D warnings
-      - name: Tests
-        run: cargo test
+        run: cargo clippy --release --all-targets --all-features --locked -- -D warnings
+      - name: Default tests
+        run: cargo test --locked
+      - name: Repository fixture tests
+        run: cargo test --locked --features repository-fixtures
+
+  rust-msrv:
+    name: rust launcher MSRV
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@1.81.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          key: msrv-1.81
+      - name: MSRV metadata
+        run: python3 ../scripts/check-rust-msrv.py .
+      - name: Build
+        run: cargo build --release --locked
+      - name: Default tests
+        run: cargo test --locked
+      - name: Repository fixture tests
+        run: cargo test --locked --features repository-fixtures
 
   node:
     name: node launcher

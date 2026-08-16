@@ -67,7 +67,7 @@ python3 -m pip install --require-hashes \
 python3 scripts/validate-family-connection-v1-vectors.py
 ```
 
-The test-only IDNA path uses the hash-pinned `idna==3.7` package as a source for
+The test-only IDNA path uses the hash-pinned `idna==3.10` package as a source for
 tables generated from the official [Unicode 15.1.0 IDNA mapping table](https://www.unicode.org/Public/idna/15.1.0/IdnaMappingTable.txt)
 and for the ContextJ and RFC 5893 bidi helpers referenced by UTS #46. The
 harness verifies at startup that the package's IDNA and UTS #46 data report

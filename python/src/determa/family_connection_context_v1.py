@@ -6,13 +6,12 @@ import bisect
 import ipaddress
 import json
 import re
-import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
 import idna
+import unicodedata2 as unicode15
 from idna import idnadata, uts46data
-from idna.core import valid_contextj
 
 NAME_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 IPV4_RE = re.compile(r"^(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*)){3}$")
@@ -193,11 +192,134 @@ def validate_resource(value: Any) -> list[str]:
 
 
 def _uts46_status(codepoint: int) -> str:
+    return _uts46_row(codepoint)[1]
+
+
+def _uts46_row(codepoint: int) -> tuple[Any, ...]:
     table = uts46data.uts46data
-    row = table[
+    return table[
         codepoint if codepoint < 256 else bisect.bisect_left(table, (codepoint, "Z")) - 1
     ]
-    return row[1]
+
+
+def _uts46_remap(domain: str) -> str:
+    output = ""
+    for position, character in enumerate(domain):
+        codepoint = ord(character)
+        try:
+            row = _uts46_row(codepoint)
+            status = row[1]
+            replacement = row[2] if len(row) == 3 else None
+            if status in {"V", "D"}:
+                output += character
+            elif replacement is not None and status == "M":
+                output += replacement
+            elif status != "I":
+                raise IndexError
+        except IndexError as exc:
+            raise idna.InvalidCodepoint(
+                f"Codepoint U+{codepoint:04X} not allowed at position "
+                f"{position + 1} in {domain!r}"
+            ) from exc
+    return unicode15.normalize("NFC", output)
+
+
+def _combining_class(codepoint: int) -> int:
+    character = chr(codepoint)
+    value = unicode15.combining(character)
+    if value == 0 and unicode15.name(character, None) is None:
+        raise ValueError("Unknown character in Unicode 15.1 data")
+    return value
+
+
+def _valid_contextj(label: str, position: int) -> bool:
+    codepoint = ord(label[position])
+
+    if codepoint == 0x200C:
+        if position > 0 and _combining_class(ord(label[position - 1])) == 9:
+            return True
+
+        left_ok = False
+        for index in range(position - 1, -1, -1):
+            joining_type = idnadata.joining_types.get(ord(label[index]))
+            if joining_type == ord("T"):
+                continue
+            if joining_type in {ord("L"), ord("D")}:
+                left_ok = True
+            break
+        if not left_ok:
+            return False
+
+        for index in range(position + 1, len(label)):
+            joining_type = idnadata.joining_types.get(ord(label[index]))
+            if joining_type == ord("T"):
+                continue
+            return joining_type in {ord("R"), ord("D")}
+        return False
+
+    if codepoint == 0x200D:
+        return position > 0 and _combining_class(ord(label[position - 1])) == 9
+
+    return False
+
+
+def _check_bidi(label: str, check_ltr: bool = False) -> None:
+    bidi_label = False
+    for index, character in enumerate(label, 1):
+        direction = unicode15.bidirectional(character)
+        if direction == "":
+            raise idna.IDNABidiError(
+                f"Unknown directionality in label {label!r} at position {index}"
+            )
+        if direction in {"R", "AL", "AN"}:
+            bidi_label = True
+    if not bidi_label and not check_ltr:
+        return
+
+    direction = unicode15.bidirectional(label[0])
+    if direction in {"R", "AL"}:
+        rtl = True
+    elif direction == "L":
+        rtl = False
+    else:
+        raise idna.IDNABidiError(
+            f"First codepoint in label {label!r} must be directionality L, R or AL"
+        )
+
+    valid_ending = False
+    number_type = None
+    for index, character in enumerate(label, 1):
+        direction = unicode15.bidirectional(character)
+        if rtl:
+            if direction not in {"R", "AL", "AN", "EN", "ES", "CS", "ET", "ON", "BN", "NSM"}:
+                raise idna.IDNABidiError(
+                    f"Invalid direction for codepoint at position {index} "
+                    "in a right-to-left label"
+                )
+            if direction in {"R", "AL", "EN", "AN"}:
+                valid_ending = True
+            elif direction != "NSM":
+                valid_ending = False
+            if direction in {"AN", "EN"}:
+                if number_type is None:
+                    number_type = direction
+                elif number_type != direction:
+                    raise idna.IDNABidiError(
+                        "Can not mix numeral types in a right-to-left label"
+                    )
+        else:
+            if direction not in {"L", "EN", "ES", "CS", "ET", "ON", "BN", "NSM"}:
+                raise idna.IDNABidiError(
+                    f"Invalid direction for codepoint at position {index} "
+                    "in a left-to-right label"
+                )
+            if direction in {"L", "EN"}:
+                valid_ending = True
+            elif direction != "NSM":
+                valid_ending = False
+
+    if not valid_ending:
+        raise idna.IDNABidiError("Label ends with illegal codepoint directionality")
 
 
 def _validate_uts46_label(label: str) -> None:
@@ -205,12 +327,12 @@ def _validate_uts46_label(label: str) -> None:
         raise idna.IDNAError("label must be non-empty")
     if label.startswith("-") or label.endswith("-") or label[2:4] == "--":
         raise idna.IDNAError("label has disallowed hyphens")
-    if "." in label or unicodedata.category(label[0]).startswith("M"):
+    if "." in label or unicode15.category(label[0]).startswith("M"):
         raise idna.IDNAError("label has invalid structure")
     for position, character in enumerate(label):
         if _uts46_status(ord(character)) not in {"V", "D"}:
             raise idna.IDNAError("label contains a disallowed code point")
-        if character in {"\u200c", "\u200d"} and not valid_contextj(label, position):
+        if character in {"\u200c", "\u200d"} and not _valid_contextj(label, position):
             raise idna.IDNAError("label fails ContextJ")
 
 
@@ -236,7 +358,7 @@ def _encode_uts46_label(label: str) -> tuple[str, str]:
 
 def _domain_to_ascii(host: str) -> str:
     try:
-        mapped = idna.uts46_remap(host, std3_rules=True, transitional=False)
+        mapped = _uts46_remap(host)
         source_labels = mapped.split(".")
         trailing_dot = bool(source_labels and source_labels[-1] == "")
         if trailing_dot:
@@ -246,13 +368,13 @@ def _domain_to_ascii(host: str) -> str:
         encoded = [_encode_uts46_label(label) for label in source_labels]
         unicode_labels = [label for label, _ascii_label in encoded]
         bidi_domain = any(
-            unicodedata.bidirectional(character) in {"R", "AL", "AN"}
+            unicode15.bidirectional(character) in {"R", "AL", "AN"}
             for label in unicode_labels
             for character in label
         )
         if bidi_domain:
             for label in unicode_labels:
-                idna.check_bidi(label, check_ltr=True)
+                _check_bidi(label, check_ltr=True)
         ascii_domain = ".".join(label for _unicode_label, label in encoded)
         if trailing_dot:
             ascii_domain += "."
@@ -271,11 +393,10 @@ def validate_unicode_data_version() -> None:
             "IDNA tables must both use Unicode "
             f"{EXPECTED_UNICODE_VERSION}, got {sorted(versions)}"
         )
-    runtime_version = tuple(int(part) for part in unicodedata.unidata_version.split("."))
-    if runtime_version < (15, 1, 0):
+    if unicode15.unidata_version != EXPECTED_UNICODE_VERSION:
         raise RuntimeError(
-            "runtime Unicode data must be at least 15.1.0, got "
-            f"{unicodedata.unidata_version}"
+            "Unicode category, normalization, combining, and bidi data must use "
+            f"{EXPECTED_UNICODE_VERSION}, got {unicode15.unidata_version}"
         )
 
 

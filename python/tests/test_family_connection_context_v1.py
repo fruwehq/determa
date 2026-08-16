@@ -33,6 +33,13 @@ def test_unicode_data_version() -> None:
     family.validate_unicode_data_version()
 
 
+def test_unicode_15_1_label_participates_in_bidi_domain() -> None:
+    assert (
+        family.canonicalize_endpoint("https://\U0002EBF0.\u0646\u0627\u0645\u0647\u200c\u0627\u06cc.example/")
+        == "https://xn--8g0n.xn--mgba3gch31f060k.example/"
+    )
+
+
 @pytest.mark.parametrize(
     "case", load_fixture("configuration.json")["cases"], ids=lambda case: case["id"]
 )
