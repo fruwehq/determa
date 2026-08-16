@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import bisect
 import ipaddress
 import json
 import re
@@ -15,6 +16,7 @@ from typing import Any
 
 import idna
 from idna import idnadata, uts46data
+from idna.core import valid_contextj
 
 ROOT = Path(__file__).resolve().parents[1]
 VECTOR_ROOT = ROOT / "conformance" / "family-connection-v1"
@@ -221,15 +223,81 @@ def validate_resource(value: Any) -> list[str]:
     return segments
 
 
+def uts46_status(codepoint: int) -> str:
+    table = uts46data.uts46data
+    row = table[
+        codepoint
+        if codepoint < 256
+        else bisect.bisect_left(table, (codepoint, "Z")) - 1
+    ]
+    return row[1]
+
+
+def validate_uts46_label(label: str) -> None:
+    if not label or not unicodedata.is_normalized("NFC", label):
+        raise idna.IDNAError("label must be non-empty NFC")
+    if label.startswith("-") or label.endswith("-") or label[2:4] == "--":
+        raise idna.IDNAError("label has disallowed hyphens")
+    if "." in label or unicodedata.category(label[0]).startswith("M"):
+        raise idna.IDNAError("label has invalid structure")
+    for position, character in enumerate(label):
+        if uts46_status(ord(character)) not in {"V", "D"}:
+            raise idna.IDNAError("label contains a disallowed code point")
+        if character in {"\u200c", "\u200d"} and not valid_contextj(
+            label, position
+        ):
+            raise idna.IDNAError("label fails ContextJ")
+
+
+def encode_uts46_label(label: str) -> tuple[str, str]:
+    if label.startswith("xn--"):
+        if any(ord(character) > 0x7F for character in label):
+            raise idna.IDNAError("Punycode label must be ASCII")
+        try:
+            unicode_label = label[4:].encode("ascii").decode("punycode")
+        except UnicodeError:
+            raise idna.IDNAError("invalid Punycode label") from None
+    else:
+        unicode_label = label
+    validate_uts46_label(unicode_label)
+    if all(ord(character) < 0x80 for character in unicode_label):
+        ascii_label = unicode_label
+    else:
+        ascii_label = "xn--" + unicode_label.encode("punycode").decode("ascii")
+    if len(ascii_label.encode("ascii")) > 63:
+        raise idna.IDNAError("label exceeds DNS length")
+    return unicode_label, ascii_label
+
+
 def domain_to_ascii(host: str) -> str:
     try:
-        return idna.encode(
-            host,
-            uts46=True,
-            transitional=False,
-            std3_rules=True,
-        ).decode("ascii")
-    except idna.IDNAError:
+        mapped = idna.uts46_remap(
+            host, std3_rules=True, transitional=False
+        )
+        source_labels = mapped.split(".")
+        trailing_dot = bool(source_labels and source_labels[-1] == "")
+        if trailing_dot:
+            source_labels.pop()
+        if not source_labels:
+            raise idna.IDNAError("empty domain")
+        encoded = [encode_uts46_label(label) for label in source_labels]
+        unicode_labels = [label for label, _ascii_label in encoded]
+        bidi_domain = any(
+            unicodedata.bidirectional(character) in {"R", "AL", "AN"}
+            for label in unicode_labels
+            for character in label
+        )
+        if bidi_domain:
+            for label in unicode_labels:
+                idna.check_bidi(label, check_ltr=True)
+        ascii_domain = ".".join(label for _unicode_label, label in encoded)
+        if trailing_dot:
+            ascii_domain += "."
+        maximum_length = 254 if trailing_dot else 253
+        if len(ascii_domain.encode("ascii")) > maximum_length:
+            raise idna.IDNAError("domain exceeds DNS length")
+        return ascii_domain
+    except (idna.IDNAError, UnicodeError):
         return ""
 
 

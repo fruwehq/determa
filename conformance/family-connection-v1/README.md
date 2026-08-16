@@ -67,15 +67,21 @@ python3 -m pip install --require-hashes \
 python3 scripts/validate-family-connection-v1-vectors.py
 ```
 
-The test-only IDNA path uses the hash-pinned `idna==3.7` tables generated from
-the official [Unicode 15.1.0 IDNA mapping table](https://www.unicode.org/Public/idna/15.1.0/IdnaMappingTable.txt).
-The harness verifies at startup that both the package's IDNA and UTS #46 data
-report exactly Unicode 15.1.0 and that the Python runtime supplies Unicode data
-at least as new as 15.1.0. It then applies nontransitional UTS #46 processing
-with STD3, hyphen, bidi, joiner, and DNS-length checks. The exact 15.1 IDNA
-tables remain authoritative when a later Python runtime knows newer code
-points. The vectors include normalization-equivalent labels, Unicode-version
-boundaries, and a valid ContextJ/bidi label so an implementation that rejects
-all non-ASCII input cannot pass. The harness independently applies the
-remaining v1 strict URI, configuration, environment-name, and routing rules and
-is not shipped in any launcher package.
+The test-only IDNA path uses the hash-pinned `idna==3.7` package as a source for
+tables generated from the official [Unicode 15.1.0 IDNA mapping table](https://www.unicode.org/Public/idna/15.1.0/IdnaMappingTable.txt)
+and for the ContextJ and RFC 5893 bidi helpers referenced by UTS #46. The
+harness verifies at startup that the package's IDNA and UTS #46 data report
+exactly Unicode 15.1.0 and that the Python runtime supplies Unicode data at
+least as new as 15.1.0.
+
+The harness implements revision-31 ToASCII directly: map, normalize to NFC,
+split labels, decode and validate existing Punycode, apply the configured
+hyphen, status, ContextJ, bidi, and DNS-length criteria, then Punycode-encode
+non-ASCII labels. It deliberately does not call `idna.encode`, because that
+API adds IDNA2008 code-point eligibility beyond the merged contract. The exact
+15.1 UTS #46 status table remains authoritative when a later Python runtime
+knows newer code points. Positive NV8, normalization, Unicode-version, and
+ContextJ/bidi vectors prevent reject-all or IDNA2008-only implementations from
+passing. The harness independently applies the remaining v1 strict URI,
+configuration, environment-name, and routing rules and is not shipped in any
+launcher package.
