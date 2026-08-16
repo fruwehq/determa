@@ -108,7 +108,21 @@ def parse_configuration_source(source: Any) -> dict[str, Any]:
         raise
     except (json.JSONDecodeError, UnicodeError):
         raise VectorError("invalid_source") from None
+    require_unicode_scalars(value)
     return validate_configuration(value)
+
+
+def require_unicode_scalars(value: Any) -> None:
+    if isinstance(value, str):
+        if any(0xD800 <= ord(character) <= 0xDFFF for character in value):
+            raise VectorError("invalid_source")
+    elif isinstance(value, list):
+        for item in value:
+            require_unicode_scalars(item)
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            require_unicode_scalars(key)
+            require_unicode_scalars(item)
 
 
 def require_closed_object(
@@ -550,7 +564,12 @@ def first_route(routes: dict[str, str], resource: str) -> Any:
 def resolve_connection(
     configuration: dict[str, Any], request: dict[str, Any]
 ) -> str:
-    resource = request.get("resource")
+    request = require_closed_object(
+        request,
+        {"resource"},
+        {"explicit_connection", "environment", "selected_context"},
+    )
+    resource = request["resource"]
     validate_resource(resource)
     connections = configuration["connections"]
 

@@ -2,15 +2,39 @@
   "name": "determa",
   "version": "0.2.0",
   "description": "Umbrella launcher for the Determa family — git-style dispatch to determa-<product> commands",
-  "keywords": ["determa", "cli", "launcher", "statechart", "dispatcher"],
+  "keywords": [
+    "determa",
+    "cli",
+    "launcher",
+    "statechart",
+    "dispatcher"
+  ],
   "license": "MIT",
   "author": "fruwehq",
-  "repository": { "type": "git", "url": "https://github.com/fruwehq/determa.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fruwehq/determa.git"
+  },
   "homepage": "https://github.com/fruwehq/determa",
-  "bin": { "determa": "bin/determa.js" },
-  "files": ["bin/", "README.md"],
-  "engines": { "node": ">=16" },
+  "bin": {
+    "determa": "bin/determa.js"
+  },
+  "exports": {
+    "./family-connection-context-v1": "./lib/family-connection-context-v1.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "test": "node test/dispatch.test.js"
+    "test": "node test/dispatch.test.js && node test/family-connection-context-v1.test.js"
+  },
+  "dependencies": {
+    "tr46": "5.0.0"
   }
 }

@@ -28,6 +28,20 @@ r = run(["definitely-not-real"]);
 assert.strictEqual(r.status, 127);
 assert.ok(r.stderr.includes("not found on PATH"));
 
+for (const command of ["auth", "config", "context"]) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "determa-reserved-"));
+  const stub = path.join(dir, `determa-${command}`);
+  fs.writeFileSync(stub, '#!/bin/sh\necho "must-not-run"\nexit 0\n');
+  fs.chmodSync(stub, 0o755);
+  r = run([command], { PATH: dir + path.delimiter + process.env.PATH });
+  assert.strictEqual(r.status, 2);
+  assert.strictEqual(r.stdout, "");
+  assert.strictEqual(
+    r.stderr,
+    `determa: family command '${command}' is reserved but not implemented yet.\n`
+  );
+}
+
 if (process.platform !== "win32") {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "determa-test-"));
   const stub = path.join(dir, "determa-echo");
@@ -88,6 +102,26 @@ if (process.platform !== "win32") {
   r = run(["--help"], { PATH: stateDir });
   assert.ok(r.stdout.includes("state (python, rust)"), r.stdout);
   assert.ok(r.stdout.includes("DETERMA_<PRODUCT>_IMPL"));
+
+  const reservedDir = fs.mkdtempSync(path.join(os.tmpdir(), "determa-discovery-"));
+  for (const name of [
+    "determa-alpha",
+    "determa-auth",
+    "determa-config",
+    "determa-config-rust",
+    "determa-context",
+  ]) {
+    const executable = path.join(reservedDir, name);
+    fs.writeFileSync(executable, "#!/bin/sh\n");
+    fs.chmodSync(executable, 0o755);
+  }
+  r = run(["list"], { PATH: reservedDir });
+  assert.strictEqual(r.stdout, "alpha\n");
+  r = run(["--help"], { PATH: reservedDir });
+  assert.ok(r.stdout.includes("  alpha"));
+  assert.ok(!r.stdout.includes("  auth"));
+  assert.ok(!r.stdout.includes("  config"));
+  assert.ok(!r.stdout.includes("  context"));
 }
 
 console.log("determa node launcher: all tests passed");

@@ -15,6 +15,9 @@ $ determa --version
 It is language-agnostic: it dispatches to whichever `determa-state` is on `PATH`, be it
 the Node, Python, or Rust build.
 
+The package requires Node 22 or newer. It also exposes the Family
+Connection/Context v1 resolver APIs through the pinned UTS #46 dependency.
+
 ## License
 
 MIT

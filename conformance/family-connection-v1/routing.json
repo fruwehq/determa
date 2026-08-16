@@ -223,6 +223,24 @@
       "configuration": "no-fallback",
       "request": {"resource": "state/foo_bar"},
       "expect": {"error": "invalid_name"}
+    },
+    {
+      "id": "routing-request-not-object",
+      "configuration": "no-fallback",
+      "request": [],
+      "expect": {"error": "invalid_type"}
+    },
+    {
+      "id": "routing-request-missing-resource",
+      "configuration": "no-fallback",
+      "request": {},
+      "expect": {"error": "missing_field"}
+    },
+    {
+      "id": "routing-request-unknown-field",
+      "configuration": "no-fallback",
+      "request": {"resource": "state", "extra": true},
+      "expect": {"error": "unknown_field"}
     }
   ]
 }

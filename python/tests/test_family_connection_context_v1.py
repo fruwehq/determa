@@ -1,0 +1,145 @@
+"""Shared Family Connection/Context v1 fixture tests for the Python implementation."""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from determa import family_connection_context_v1 as family
+
+ROOT = Path(__file__).resolve().parents[2]
+VECTOR_ROOT = ROOT / "conformance" / "family-connection-v1"
+
+
+def load_fixture(name: str) -> dict[str, Any]:
+    with (VECTOR_ROOT / name).open(encoding="utf-8") as fixture_file:
+        return json.load(fixture_file)
+
+
+def assert_case(case: dict[str, Any], operation: Callable[[], Any]) -> None:
+    expected = case["expect"]
+    if "error" in expected:
+        with pytest.raises(family.FamilyConnectionError) as exc_info:
+            operation()
+        assert exc_info.value.code == expected["error"]
+    else:
+        value = operation()
+        if isinstance(value, family.ValidatedConfiguration):
+            value = value.to_value()
+        assert value == expected["value"]
+
+
+def test_unicode_data_version() -> None:
+    family.validate_unicode_data_version()
+
+
+def test_reserved_family_commands_are_public() -> None:
+    assert family.RESERVED_FAMILY_COMMANDS == frozenset({"auth", "config", "context"})
+
+
+def test_unicode_15_1_label_participates_in_bidi_domain() -> None:
+    assert (
+        family.canonicalize_endpoint("https://\U0002EBF0.\u0646\u0627\u0645\u0647\u200c\u0627\u06cc.example/")
+        == "https://xn--8g0n.xn--mgba3gch31f060k.example/"
+    )
+
+
+@pytest.mark.parametrize(
+    "case", load_fixture("configuration.json")["cases"], ids=lambda case: case["id"]
+)
+def test_configuration_vectors(case: dict[str, Any]) -> None:
+    assert_case(case, lambda: family.parse_configuration_source(case["source"]))
+
+
+@pytest.mark.parametrize(
+    "case", load_fixture("endpoints.json")["cases"], ids=lambda case: case["id"]
+)
+def test_endpoint_vectors(case: dict[str, Any]) -> None:
+    assert_case(case, lambda: family.canonicalize_endpoint(case["input"]))
+
+
+@pytest.mark.parametrize(
+    "case", load_fixture("environment.json")["cases"], ids=lambda case: case["id"]
+)
+def test_environment_vectors(case: dict[str, Any]) -> None:
+    assert_case(case, lambda: family.environment_name(case["resource"]))
+
+
+def test_environment_distinct_sets() -> None:
+    fixture = load_fixture("environment.json")
+    results = {
+        case["id"]: family.environment_name(case["resource"])
+        for case in fixture["cases"]
+        if "value" in case["expect"]
+    }
+    for distinct_set in fixture.get("distinct_sets", []):
+        values = [results[case_id] for case_id in distinct_set]
+        assert len(values) == len(set(values))
+
+
+@pytest.fixture(scope="module")
+def routing_configurations() -> dict[str, family.ValidatedConfiguration]:
+    fixture = load_fixture("routing.json")
+    return {
+        name: family.parse_configuration_source(source)
+        for name, source in fixture["configurations"].items()
+    }
+
+
+@pytest.mark.parametrize("case", load_fixture("routing.json")["cases"], ids=lambda case: case["id"])
+def test_routing_vectors(
+    case: dict[str, Any],
+    routing_configurations: dict[str, family.ValidatedConfiguration],
+) -> None:
+    configuration = routing_configurations[case["configuration"]]
+    assert_case(case, lambda: family.resolve_connection(configuration, case["request"]))
+
+
+def test_decoded_configuration_is_opaque_and_isolated_from_mutation() -> None:
+    source = {
+        "version": 1,
+        "connections": {"cloud": {"endpoint": "https://example.com"}},
+        "contexts": {},
+    }
+    configuration = family.validate_configuration(source)
+    source["connections"]["cloud"]["endpoint"] = "https://changed.example"
+    exported = configuration.to_value()
+    exported["connections"].clear()
+
+    assert (
+        family.resolve_connection(
+            configuration,
+            {"resource": "state", "explicit_connection": "cloud"},
+        )
+        == "cloud"
+    )
+
+
+@pytest.mark.parametrize("configuration", [None, {}, []])
+def test_resolver_rejects_unvalidated_configuration(configuration: Any) -> None:
+    with pytest.raises(family.FamilyConnectionError) as exc_info:
+        family.resolve_connection(configuration, {"resource": "state"})
+    assert exc_info.value.code == "invalid_type"
+
+
+@pytest.mark.parametrize("value", [None, [], "configuration", 1])
+def test_validator_rejects_non_object_input_with_family_error(value: Any) -> None:
+    with pytest.raises(family.FamilyConnectionError) as exc_info:
+        family.validate_configuration(value)
+    assert exc_info.value.code == "invalid_type"
+
+
+@pytest.mark.parametrize("request_value", [None, [], "state", 1])
+def test_resolver_rejects_malformed_request_without_native_exception(
+    request_value: Any,
+) -> None:
+    configuration = family.validate_configuration(
+        {"version": 1, "connections": {}, "contexts": {}}
+    )
+    with pytest.raises(family.FamilyConnectionError) as exc_info:
+        family.resolve_connection(configuration, request_value)
+    assert exc_info.value.code == "invalid_type"

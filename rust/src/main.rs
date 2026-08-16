@@ -15,6 +15,8 @@ use std::env;
 use std::fs;
 use std::process::{exit, Command};
 
+use determa::family_connection_context_v1::RESERVED_FAMILY_COMMANDS;
+
 const PREFIX: &str = "determa-";
 
 fn version() -> &'static str {
@@ -61,7 +63,14 @@ fn split_variant(stem: &str, all: &BTreeSet<String>) -> (String, Option<String>)
 
 /// Products → sorted implementation variants on `PATH` (canonical products map to empty).
 fn discover() -> Vec<(String, Vec<String>)> {
-    let all = stems();
+    let all: BTreeSet<String> = stems()
+        .into_iter()
+        .filter(|stem| {
+            !RESERVED_FAMILY_COMMANDS
+                .iter()
+                .any(|reserved| stem.split('-').next() == Some(*reserved))
+        })
+        .collect();
     let mut products: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for stem in &all {
         let (product, impl_) = split_variant(stem, &all);
@@ -143,6 +152,10 @@ fn main() {
             for (product, impls) in discover() {
                 println!("{}", format_product(&product, &impls));
             }
+        }
+        Some(sub) if RESERVED_FAMILY_COMMANDS.contains(&sub) => {
+            eprintln!("determa: family command '{sub}' is reserved but not implemented yet.");
+            exit(2);
         }
         Some(sub) => match exe_for(sub) {
             Some(exe) => match Command::new(&exe).args(&args[1..]).status() {

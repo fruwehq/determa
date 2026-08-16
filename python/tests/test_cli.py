@@ -32,6 +32,22 @@ def test_unknown_product_exits_127(capsys):
     assert "not found on PATH" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("command", ["auth", "config", "context"])
+def test_reserved_family_command_exits_2(command, tmp_path, monkeypatch, capsys):
+    exe = tmp_path / f"determa-{command}"
+    exe.write_text('#!/bin/sh\necho "must-not-run"\nexit 0\n')
+    exe.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ.get("PATH", ""))
+
+    assert cli.main([command]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert (
+        captured.err
+        == f"determa: family command '{command}' is reserved but not implemented yet.\n"
+    )
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="uses a POSIX shell stub")
 def test_dispatches_to_product_on_path(tmp_path, monkeypatch, capfd):
     exe = tmp_path / "determa-echo"
@@ -61,6 +77,28 @@ def test_list_discovers_products(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("PATH", str(tmp_path))  # isolate PATH to the stub dir
     assert cli.main(["list"]) == 0
     assert capsys.readouterr().out.split() == ["alpha", "beta"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="uses POSIX executable stubs")
+def test_reserved_family_commands_are_hidden_from_discovery(tmp_path, monkeypatch, capsys):
+    for name in (
+        "determa-alpha",
+        "determa-auth",
+        "determa-config",
+        "determa-config-rust",
+        "determa-context",
+    ):
+        executable = tmp_path / name
+        executable.write_text("#!/bin/sh\n")
+        executable.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path))
+
+    assert cli.main(["list"]) == 0
+    assert capsys.readouterr().out.splitlines() == ["alpha"]
+    assert cli.main(["--help"]) == 0
+    help_output = capsys.readouterr().out
+    assert "  alpha" in help_output
+    assert all(f"  {name}" not in help_output for name in ("auth", "config", "context"))
 
 
 # --- implementation selection (DETERMA_<PRODUCT>_IMPL) ---------------------

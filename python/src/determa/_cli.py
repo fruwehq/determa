@@ -17,6 +17,8 @@ import shutil
 import subprocess
 import sys
 
+from determa.family_connection_context_v1 import RESERVED_FAMILY_COMMANDS
+
 PREFIX = "determa-"
 
 
@@ -77,7 +79,11 @@ def _discover() -> dict[str, list[str]]:
     ``determa-state-python`` and ``determa-state-rust`` installed, returns
     ``{"state": ["python", "rust"]}``.
     """
-    stems = _stems()
+    stems = {
+        stem
+        for stem in _stems()
+        if stem.split("-", 1)[0] not in RESERVED_FAMILY_COMMANDS
+    }
     products: dict[str, set[str]] = {}
     for stem in stems:
         product, impl = _split_variant(stem, stems)
@@ -147,6 +153,11 @@ def main(argv: list[str] | None = None) -> int:
         for product, impls in _discover().items():
             print(_format_product(product, impls))
         return 0
+    if args[0] in RESERVED_FAMILY_COMMANDS:
+        sys.stderr.write(
+            f"determa: family command '{args[0]}' is reserved but not implemented yet.\n"
+        )
+        return 2
 
     sub, rest = args[0], args[1:]
     exe = _exe_for(sub)

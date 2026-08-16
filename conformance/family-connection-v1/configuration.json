@@ -273,6 +273,31 @@
       "id": "config-negative-infinity-source",
       "source": "{\"version\":-Infinity,\"connections\":{},\"contexts\":{}}",
       "expect": {"error": "invalid_source"}
+    },
+    {
+      "id": "config-version-overflowing-exponent",
+      "source": "{\"version\":1e400,\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "invalid_version"}
+    },
+    {
+      "id": "config-version-400-digit-integer",
+      "source": "{\"version\":9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999,\"connections\":{},\"contexts\":{}}",
+      "expect": {"error": "invalid_version"}
+    },
+    {
+      "id": "config-lone-surrogate-source",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{},\"default_context\":\"\\ud800\"}",
+      "expect": {"error": "invalid_source"}
+    },
+    {
+      "id": "config-prototype-key-at-root",
+      "source": "{\"version\":1,\"connections\":{},\"contexts\":{},\"__proto__\":{}}",
+      "expect": {"error": "unknown_field"}
+    },
+    {
+      "id": "config-prototype-key-in-connection",
+      "source": "{\"version\":1,\"connections\":{\"cloud\":{\"endpoint\":\"https://example.com\",\"__proto__\":{}}},\"contexts\":{}}",
+      "expect": {"error": "unknown_field"}
     }
   ]
 }

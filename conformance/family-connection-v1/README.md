@@ -33,7 +33,7 @@ exactly one of:
 | code | meaning |
 |---|---|
 | `duplicate_key` | a source object repeats a key before model construction |
-| `invalid_source` | source JSON is malformed, unavailable as a string, or contains a non-JSON numeric constant |
+| `invalid_source` | source JSON is malformed, unavailable as a string, contains a non-JSON numeric constant, or decodes a lone surrogate |
 | `missing_field` | a required closed-model field is absent |
 | `unknown_field` | a closed-model object contains an undeclared field |
 | `invalid_type` | a value has a type not accepted at that location |
@@ -67,7 +67,7 @@ python3 -m pip install --require-hashes \
 python3 scripts/validate-family-connection-v1-vectors.py
 ```
 
-The test-only IDNA path uses the hash-pinned `idna==3.7` package as a source for
+The test-only IDNA path uses the hash-pinned `idna==3.10` package as a source for
 tables generated from the official [Unicode 15.1.0 IDNA mapping table](https://www.unicode.org/Public/idna/15.1.0/IdnaMappingTable.txt)
 and for the ContextJ and RFC 5893 bidi helpers referenced by UTS #46. The
 harness verifies at startup that the package's IDNA and UTS #46 data report
