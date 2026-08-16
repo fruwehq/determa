@@ -33,7 +33,7 @@ exactly one of:
 | code | meaning |
 |---|---|
 | `duplicate_key` | a source object repeats a key before model construction |
-| `invalid_source` | source JSON is malformed, unavailable as a string, or contains a non-JSON numeric constant |
+| `invalid_source` | source JSON is malformed, unavailable as a string, contains a non-JSON numeric constant, or decodes a lone surrogate |
 | `missing_field` | a required closed-model field is absent |
 | `unknown_field` | a closed-model object contains an undeclared field |
 | `invalid_type` | a value has a type not accepted at that location |

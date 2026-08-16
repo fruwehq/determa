@@ -31,6 +31,23 @@ class NumberToken {
   }
 }
 
+const VALIDATED_CONFIGURATION_TOKEN = Symbol("validated-configuration");
+const validatedModels = new WeakMap();
+
+class ValidatedConfiguration {
+  constructor(model, token) {
+    if (token !== VALIDATED_CONFIGURATION_TOKEN) fail("invalid_type");
+    validatedModels.set(this, model);
+    Object.freeze(this);
+  }
+
+  toValue() {
+    const model = validatedModels.get(this);
+    if (!model) fail("invalid_type");
+    return cloneJsonValue(model);
+  }
+}
+
 function fail(code) {
   throw new FamilyConnectionError(code);
 }
@@ -73,7 +90,7 @@ class JsonParser {
 
   parseObject() {
     this.index++;
-    const result = {};
+    const result = Object.create(null);
     const seen = new Set();
     this.skipWhitespace();
     if (this.source[this.index] === "}") {
@@ -222,7 +239,7 @@ class JsonParser {
 
 function parseConfigurationSource(source) {
   if (typeof source !== "string") fail("invalid_source");
-  return validateConfiguration(new JsonParser(source).parse());
+  return validateConfigurationValue(new JsonParser(source).parse(), true);
 }
 
 function isObject(value) {
@@ -267,7 +284,7 @@ function validateRoutes(value, connectionNames) {
   if (!isObject(value) || value instanceof IntegerToken || value instanceof NumberToken) {
     fail("invalid_type");
   }
-  const result = {};
+  const result = Object.create(null);
   for (const [resource, connection] of Object.entries(value)) {
     validateResource(resource);
     if (typeof connection !== "string") fail("invalid_type");
@@ -278,17 +295,47 @@ function validateRoutes(value, connectionNames) {
 }
 
 function validateConfiguration(value) {
+  assertJsonUnicodeScalars(value);
+  return validateConfigurationValue(value, false);
+}
+
+function assertJsonUnicodeScalars(value) {
+  if (typeof value === "string") {
+    for (let index = 0; index < value.length; index++) {
+      const code = value.charCodeAt(index);
+      if (code >= 0xd800 && code <= 0xdbff) {
+        const next = value.charCodeAt(index + 1);
+        if (!(next >= 0xdc00 && next <= 0xdfff)) fail("invalid_source");
+        index++;
+      } else if (code >= 0xdc00 && code <= 0xdfff) {
+        fail("invalid_source");
+      }
+    }
+  } else if (Array.isArray(value)) {
+    for (const item of value) assertJsonUnicodeScalars(item);
+  } else if (isObject(value)) {
+    for (const [key, item] of Object.entries(value)) {
+      assertJsonUnicodeScalars(key);
+      assertJsonUnicodeScalars(item);
+    }
+  }
+}
+
+function validateConfigurationValue(value, sourceTokens) {
   const root = requireClosedObject(
     value,
     new Set(["version", "connections", "contexts"]),
     new Set(["default_context", "defaults"])
   );
-  if (!(root.version instanceof IntegerToken) || root.version.source !== "1") {
+  const validVersion = sourceTokens
+    ? root.version instanceof IntegerToken && root.version.source === "1"
+    : typeof root.version === "number" && Number.isInteger(root.version) && root.version === 1;
+  if (!validVersion) {
     fail("invalid_version");
   }
 
   if (!isObject(root.connections)) fail("invalid_type");
-  const connections = {};
+  const connections = Object.create(null);
   for (const [rawName, rawConnection] of Object.entries(root.connections)) {
     const name = requireName(rawName);
     const connection = requireClosedObject(
@@ -296,31 +343,34 @@ function validateConfiguration(value) {
       new Set(["endpoint"]),
       new Set(["credential_ref"])
     );
-    const normalized = { endpoint: canonicalizeEndpoint(connection.endpoint) };
+    const normalized = Object.create(null);
+    normalized.endpoint = canonicalizeEndpoint(connection.endpoint);
     if (Object.prototype.hasOwnProperty.call(connection, "credential_ref")) {
       const credential = requireClosedObject(
         connection.credential_ref,
         new Set(["provider", "name"]),
         new Set()
       );
-      normalized.credential_ref = {
+      normalized.credential_ref = Object.assign(Object.create(null), {
         provider: requireName(credential.provider),
         name: requireNonemptyString(credential.name),
-      };
+      });
     }
     connections[name] = normalized;
   }
 
   const connectionNames = new Set(Object.keys(connections));
   if (!isObject(root.contexts)) fail("invalid_type");
-  const contexts = {};
+  const contexts = Object.create(null);
   for (const [rawName, rawContext] of Object.entries(root.contexts)) {
     const name = requireName(rawName);
     const context = requireClosedObject(rawContext, new Set(["routes"]), new Set());
-    contexts[name] = { routes: validateRoutes(context.routes, connectionNames) };
+    contexts[name] = Object.assign(Object.create(null), {
+      routes: validateRoutes(context.routes, connectionNames),
+    });
   }
 
-  const result = { version: 1, connections, contexts };
+  const result = Object.assign(Object.create(null), { version: 1, connections, contexts });
   if (Object.prototype.hasOwnProperty.call(root, "default_context")) {
     const defaultContext = requireName(root.default_context);
     if (!Object.prototype.hasOwnProperty.call(contexts, defaultContext)) fail("invalid_reference");
@@ -328,9 +378,26 @@ function validateConfiguration(value) {
   }
   if (Object.prototype.hasOwnProperty.call(root, "defaults")) {
     const defaults = requireClosedObject(root.defaults, new Set(["routes"]), new Set());
-    result.defaults = { routes: validateRoutes(defaults.routes, connectionNames) };
+    result.defaults = Object.assign(Object.create(null), {
+      routes: validateRoutes(defaults.routes, connectionNames),
+    });
   }
+  freezeJsonValue(result);
+  return new ValidatedConfiguration(result, VALIDATED_CONFIGURATION_TOKEN);
+}
+
+function cloneJsonValue(value) {
+  if (Array.isArray(value)) return value.map(cloneJsonValue);
+  if (!isObject(value)) return value;
+  const result = Object.create(null);
+  for (const [key, item] of Object.entries(value)) result[key] = cloneJsonValue(item);
   return result;
+}
+
+function freezeJsonValue(value) {
+  if (!isObject(value) && !Array.isArray(value)) return value;
+  for (const item of Object.values(value)) freezeJsonValue(item);
+  return Object.freeze(value);
 }
 
 function assertValidEndpointScalars(value) {
@@ -364,6 +431,9 @@ function parseIpv6Part(part) {
 function parseIpv6(rawHost) {
   if (!rawHost || rawHost.includes("%")) fail("invalid_endpoint_host");
   if ((rawHost.match(/::/g) || []).length > 1) fail("invalid_endpoint_host");
+  if (rawHost.includes(".") && !/(?:^|:)(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*)){3}$/.test(rawHost)) {
+    fail("invalid_endpoint_host");
+  }
 
   const hasCompression = rawHost.includes("::");
   const [leftText, rightText = ""] = rawHost.split("::");
@@ -615,9 +685,16 @@ function firstRoute(routes, resource) {
 }
 
 function resolveConnection(configuration, request) {
+  const model = validatedModels.get(configuration);
+  if (!model) fail("invalid_type");
+  request = requireClosedObject(
+    request,
+    new Set(["resource"]),
+    new Set(["explicit_connection", "environment", "selected_context"])
+  );
   const resource = request.resource;
   validateResource(resource);
-  const connections = configuration.connections;
+  const connections = model.connections;
 
   if (Object.prototype.hasOwnProperty.call(request, "explicit_connection")) {
     const explicit = request.explicit_connection;
@@ -648,20 +725,20 @@ function resolveConnection(configuration, request) {
 
   if (Object.prototype.hasOwnProperty.call(request, "selected_context")) {
     const selected = request.selected_context;
-    if (typeof selected !== "string" || !Object.prototype.hasOwnProperty.call(configuration.contexts, selected)) {
+    if (typeof selected !== "string" || !Object.prototype.hasOwnProperty.call(model.contexts, selected)) {
       fail("invalid_context");
     }
-    const connection = firstRoute(configuration.contexts[selected].routes, resource);
+    const connection = firstRoute(model.contexts[selected].routes, resource);
     if (connection !== null) return connection;
   }
 
-  const defaults = configuration.defaults || { routes: {} };
+  const defaults = model.defaults || { routes: {} };
   const defaultConnection = firstRoute(defaults.routes, resource);
   if (defaultConnection !== null) return defaultConnection;
 
-  const defaultContext = configuration.default_context;
+  const defaultContext = model.default_context;
   if (defaultContext !== undefined) {
-    const connection = firstRoute(configuration.contexts[defaultContext].routes, resource);
+    const connection = firstRoute(model.contexts[defaultContext].routes, resource);
     if (connection !== null) return connection;
   }
   fail("unresolved_connection");
@@ -670,6 +747,7 @@ function resolveConnection(configuration, request) {
 module.exports = {
   FamilyConnectionError,
   RESERVED_FAMILY_COMMANDS,
+  ValidatedConfiguration,
   canonicalizeEndpoint,
   environmentName,
   parseConfigurationSource,

@@ -205,3 +205,28 @@ fn help_shows_impl_variants() {
     assert!(out.contains("state (python, rust)"), "{out}");
     assert!(out.contains("DETERMA_<PRODUCT>_IMPL"));
 }
+
+#[test]
+fn reserved_family_commands_are_hidden_from_discovery() {
+    let sp = StubPath::new();
+    for name in [
+        "determa-alpha",
+        "determa-auth",
+        "determa-config",
+        "determa-config-rust",
+        "determa-context",
+    ] {
+        sp.add(name, "unused");
+    }
+    let isolated = format!("{}", sp.dir.path().to_string_lossy());
+    let (rc, out, _) = run(&["list"], &isolated, &[]);
+    assert_eq!(rc, 0);
+    assert_eq!(out, "alpha\n");
+
+    let (rc, out, _) = run(&["--help"], &isolated, &[]);
+    assert_eq!(rc, 0);
+    assert!(out.contains("  alpha"));
+    assert!(!out.contains("  auth"));
+    assert!(!out.contains("  config"));
+    assert!(!out.contains("  context"));
+}

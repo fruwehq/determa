@@ -21,7 +21,9 @@ function assertCase(case_, operation) {
       case_.id
     );
   } else {
-    assert.deepStrictEqual(operation(), case_.expect.value, case_.id);
+    let value = operation();
+    if (value instanceof family.ValidatedConfiguration) value = value.toValue();
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(value)), case_.expect.value, case_.id);
   }
 }
 
@@ -56,4 +58,45 @@ for (const case_ of routingFixture.cases) {
   assertCase(case_, () => family.resolveConnection(configuration, case_.request));
 }
 
-console.log("family connection/context v1 node vectors: 152 passed");
+const decoded = {
+  version: 1,
+  connections: { cloud: { endpoint: "https://example.com" } },
+  contexts: {},
+};
+const validated = family.validateConfiguration(decoded);
+decoded.connections.cloud.endpoint = "https://changed.example";
+const exported = validated.toValue();
+delete exported.connections.cloud;
+assert.strictEqual(
+  family.resolveConnection(validated, {
+    resource: "state",
+    explicit_connection: "cloud",
+  }),
+  "cloud"
+);
+
+for (const malformed of [null, {}, [], "configuration"]) {
+  assert.throws(
+    () => family.resolveConnection(malformed, { resource: "state" }),
+    error => error instanceof family.FamilyConnectionError && error.code === "invalid_type"
+  );
+}
+for (const malformed of [null, [], "configuration", 1]) {
+  assert.throws(
+    () => family.validateConfiguration(malformed),
+    error => error instanceof family.FamilyConnectionError && error.code === "invalid_type"
+  );
+}
+for (const malformed of [null, [], "state", 1]) {
+  assert.throws(
+    () => family.resolveConnection(validated, malformed),
+    error => error instanceof family.FamilyConnectionError && error.code === "invalid_type"
+  );
+}
+
+const vectorCount =
+  loadFixture("configuration.json").cases.length +
+  loadFixture("endpoints.json").cases.length +
+  environmentFixture.cases.length +
+  routingFixture.cases.length;
+console.log(`family connection/context v1 node vectors: ${vectorCount} passed`);

@@ -31,6 +31,17 @@ impl std::error::Error for FamilyConnectionError {}
 
 type Result<T> = std::result::Result<T, FamilyConnectionError>;
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ValidatedConfiguration {
+    value: Value,
+}
+
+impl ValidatedConfiguration {
+    pub fn to_value(&self) -> Value {
+        self.value.clone()
+    }
+}
+
 #[derive(Debug, Clone)]
 enum JsonValue {
     Null,
@@ -119,15 +130,49 @@ impl<'de> Deserialize<'de> for JsonValue {
     }
 }
 
-pub fn parse_configuration_source(source: &str) -> Result<Value> {
-    let parsed = serde_json::from_str::<JsonValue>(source).map_err(|error| {
+pub fn parse_configuration_source(source: &str) -> Result<ValidatedConfiguration> {
+    serde_json::from_str::<JsonValue>(source).map_err(|error| {
         if error.to_string().contains("duplicate_key") {
             FamilyConnectionError::new("duplicate_key")
         } else {
             FamilyConnectionError::new("invalid_source")
         }
     })?;
-    validate_configuration(&parsed)
+    let parsed = serde_json::from_str::<Value>(source)
+        .map_err(|_| FamilyConnectionError::new("invalid_source"))?;
+    normalize_configuration(&json_model(&parsed)).map(|value| ValidatedConfiguration { value })
+}
+
+pub fn validate_configuration(value: &Value) -> Result<ValidatedConfiguration> {
+    normalize_configuration(&json_model(value)).map(|value| ValidatedConfiguration { value })
+}
+
+fn json_model(value: &Value) -> JsonValue {
+    match value {
+        Value::Null => JsonValue::Null,
+        Value::Bool(_) => JsonValue::Bool,
+        Value::Number(number) => {
+            let source = number.to_string();
+            if source
+                .strip_prefix('-')
+                .unwrap_or(&source)
+                .chars()
+                .all(|character| character.is_ascii_digit())
+            {
+                JsonValue::Integer(source)
+            } else {
+                JsonValue::Number
+            }
+        }
+        Value::String(value) => JsonValue::String(value.clone()),
+        Value::Array(_) => JsonValue::Array,
+        Value::Object(values) => JsonValue::Object(
+            values
+                .iter()
+                .map(|(key, value)| (key.clone(), json_model(value)))
+                .collect(),
+        ),
+    }
 }
 
 fn object<'a>(
@@ -211,7 +256,7 @@ fn validate_routes(
     Ok(result)
 }
 
-fn validate_configuration(value: &JsonValue) -> Result<Value> {
+fn normalize_configuration(value: &JsonValue) -> Result<Value> {
     let root = object(
         value,
         &["version", "connections", "contexts"],
@@ -321,12 +366,12 @@ pub fn canonicalize_endpoint(value: &str) -> Result<String> {
     if !valid_scheme(&scheme) {
         return Err(FamilyConnectionError::new("invalid_endpoint_syntax"));
     }
-    if scheme != "http" && scheme != "https" {
-        return Err(FamilyConnectionError::new("unsupported_endpoint_scheme"));
-    }
     let after_scheme = &value[scheme_end + 3..];
     if after_scheme.contains('?') || after_scheme.contains('#') {
         return Err(FamilyConnectionError::new("invalid_endpoint_syntax"));
+    }
+    if scheme != "http" && scheme != "https" {
+        return Err(FamilyConnectionError::new("unsupported_endpoint_scheme"));
     }
     let slash = after_scheme.find('/');
     let (authority, raw_path) = match slash {
@@ -712,15 +757,36 @@ fn first_route(routes: &Map<String, Value>, resource: &str) -> Option<String> {
         .find_map(|key| routes.get(key).and_then(Value::as_str).map(str::to_string))
 }
 
-pub fn resolve_connection(configuration: &Value, request: &Value) -> Result<String> {
+pub fn resolve_connection(
+    configuration: &ValidatedConfiguration,
+    request: &Value,
+) -> Result<String> {
     let request = request
         .as_object()
         .ok_or_else(|| FamilyConnectionError::new("invalid_type"))?;
+    for required in ["resource"] {
+        if !request.contains_key(required) {
+            return Err(FamilyConnectionError::new("missing_field"));
+        }
+    }
+    for field in request.keys() {
+        if ![
+            "resource",
+            "explicit_connection",
+            "environment",
+            "selected_context",
+        ]
+        .contains(&field.as_str())
+        {
+            return Err(FamilyConnectionError::new("unknown_field"));
+        }
+    }
     let resource = request
         .get("resource")
         .and_then(Value::as_str)
         .ok_or_else(|| FamilyConnectionError::new("invalid_type"))?;
     validate_resource(resource)?;
+    let configuration = &configuration.value;
     let connections = configuration
         .get("connections")
         .and_then(Value::as_object)

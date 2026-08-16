@@ -32,7 +32,6 @@ where
     }
 }
 
-#[test]
 fn configuration_vectors() {
     for case in load_fixture("configuration.json")["cases"]
         .as_array()
@@ -40,12 +39,11 @@ fn configuration_vectors() {
     {
         assert_case(case, || {
             let source = case["source"].as_str().unwrap();
-            family::parse_configuration_source(source)
+            family::parse_configuration_source(source).map(|configuration| configuration.to_value())
         });
     }
 }
 
-#[test]
 fn endpoint_vectors() {
     for case in load_fixture("endpoints.json")["cases"].as_array().unwrap() {
         assert_case(case, || {
@@ -54,7 +52,6 @@ fn endpoint_vectors() {
     }
 }
 
-#[test]
 fn environment_vectors() {
     let fixture = load_fixture("environment.json");
     let mut results = std::collections::BTreeMap::new();
@@ -81,7 +78,6 @@ fn environment_vectors() {
     }
 }
 
-#[test]
 fn routing_vectors() {
     let fixture = load_fixture("routing.json");
     let mut configurations = std::collections::BTreeMap::new();
@@ -99,4 +95,11 @@ fn routing_vectors() {
             family::resolve_connection(configuration, &case["request"]).map(Value::String)
         });
     }
+}
+
+fn main() {
+    configuration_vectors();
+    endpoint_vectors();
+    environment_vectors();
+    routing_vectors();
 }

@@ -22,9 +22,10 @@ exact dependencies, and `Cargo.lock` is checked in for this binary crate so the
 verified Unicode 15.1 endpoint boundary is reproducible in CI and locked
 installs.
 
-Default `cargo test` is self-contained for the packaged crate. Repository-level
-shared fixtures are exercised with `cargo test --features repository-fixtures`
-from this monorepo checkout.
+All crate tests, including `cargo test --all-features`, are self-contained in
+the published package. Repository-level shared fixtures are exercised from this
+monorepo checkout with
+`cargo run --example family-connection-context-v1-vectors --features repository-fixtures`.
 
 ## License
 

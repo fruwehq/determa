@@ -61,7 +61,9 @@ function splitVariant(stem, all) {
 
 // Products -> sorted impl variants (canonical products map to []). Array of [product, impls].
 function discover() {
-  const all = stems();
+  const all = new Set(
+    [...stems()].filter(stem => !RESERVED_FAMILY_COMMANDS.has(stem.split("-", 1)[0]))
+  );
   const products = new Map();
   for (const stem of all) {
     const [product, impl] = splitVariant(stem, all);

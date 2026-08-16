@@ -163,6 +163,11 @@
       "expect": {"error": "unsupported_endpoint_scheme"}
     },
     {
+      "id": "endpoint-query-precedes-unsupported-scheme",
+      "input": "ftp://example.com/?x=1",
+      "expect": {"error": "invalid_endpoint_syntax"}
+    },
+    {
       "id": "endpoint-empty-host",
       "input": "https:///path",
       "expect": {"error": "invalid_endpoint_authority"}
@@ -261,6 +266,11 @@
       "id": "endpoint-unbracketed-ipv6",
       "input": "https://2001:db8::1/",
       "expect": {"error": "invalid_endpoint_authority"}
+    },
+    {
+      "id": "endpoint-ipv4-suffix-not-final-32-bits",
+      "input": "https://[192.0.2.1::1]/",
+      "expect": {"error": "invalid_endpoint_host"}
     },
     {
       "id": "endpoint-ipv6-zone",

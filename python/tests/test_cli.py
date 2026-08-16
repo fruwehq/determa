@@ -79,6 +79,28 @@ def test_list_discovers_products(tmp_path, monkeypatch, capsys):
     assert capsys.readouterr().out.split() == ["alpha", "beta"]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="uses POSIX executable stubs")
+def test_reserved_family_commands_are_hidden_from_discovery(tmp_path, monkeypatch, capsys):
+    for name in (
+        "determa-alpha",
+        "determa-auth",
+        "determa-config",
+        "determa-config-rust",
+        "determa-context",
+    ):
+        executable = tmp_path / name
+        executable.write_text("#!/bin/sh\n")
+        executable.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path))
+
+    assert cli.main(["list"]) == 0
+    assert capsys.readouterr().out.splitlines() == ["alpha"]
+    assert cli.main(["--help"]) == 0
+    help_output = capsys.readouterr().out
+    assert "  alpha" in help_output
+    assert all(f"  {name}" not in help_output for name in ("auth", "config", "context"))
+
+
 # --- implementation selection (DETERMA_<PRODUCT>_IMPL) ---------------------
 
 def _make_state_stubs(tmp_path):

@@ -79,7 +79,11 @@ def _discover() -> dict[str, list[str]]:
     ``determa-state-python`` and ``determa-state-rust`` installed, returns
     ``{"state": ["python", "rust"]}``.
     """
-    stems = _stems()
+    stems = {
+        stem
+        for stem in _stems()
+        if stem.split("-", 1)[0] not in RESERVED_FAMILY_COMMANDS
+    }
     products: dict[str, set[str]] = {}
     for stem in stems:
         product, impl = _split_variant(stem, stems)

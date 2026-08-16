@@ -43,6 +43,11 @@ logical model. Its file syntax, location, and discovery rules are intentionally
 unspecified in v1. Concrete syntaxes MUST preserve the value types below and
 MUST reject duplicate map keys before constructing this model.
 
+A configuration source MUST be valid JSON whose object keys and string values
+decode to Unicode scalar-value sequences. A source containing an escaped or
+unescaped lone UTF-16 surrogate is `invalid_source`, even on a host language
+whose string type can represent lone surrogates.
+
 ```yaml
 version: 1
 default_context: personal
@@ -144,11 +149,23 @@ A source document containing two `cloud` keys in the same `connections` map is
 invalid before model construction. A parser MUST NOT keep the first value, keep
 the last value, or silently merge the two connection objects.
 
+The public parser and decoded-value validator MUST return an opaque,
+implementation-defined `ValidatedConfiguration`, not expose the normalized
+model as mutable configuration state. The validated value MUST be immutable or
+defensively isolated from every caller-owned input and exported copy. A public
+conversion back to the JSON-shaped logical model MAY return a fresh copy.
+Resolution MUST accept only a `ValidatedConfiguration`; any other value and any
+malformed request MUST fail with the error codes in this contract rather than a
+language-native exception or panic. A decoded-value validator accepts ordinary
+JSON values, including numeric integer `1` for `version`; source-only numeric
+token distinctions are enforced by the source parser before model construction.
+
 ## Canonical endpoints
 
 Each connection has exactly one `endpoint`. A configuration reader MUST apply
 the ordered algorithm below before comparison, routing, or persistence. The
-result is an ASCII absolute URI under RFC 3986. Implementations MUST implement
+first failing numbered step determines the error; later failures MUST NOT
+replace it. The result is an ASCII absolute URI under RFC 3986. Implementations MUST implement
 this profile directly or prove their URL library produces the same result; a
 library's platform-dependent URL normalization is not normative.
 
@@ -181,10 +198,11 @@ library's platform-dependent URL normalization is not normative.
      accepted by some URL libraries.
    - A bracketed IPv6 literal MUST parse under RFC 4291 section 2.2 and MUST be
      emitted in brackets using RFC 5952 sections 4.1 through 4.3. Always emit
-     all 128 bits in hexadecimal form; an accepted IPv4-embedded input such as
+     all 128 bits in hexadecimal form. A dotted-decimal IPv4 suffix is accepted
+     only when it supplies the final 32 bits of the IPv6 address; for example,
      `::ffff:192.0.2.1` is emitted as `::ffff:c000:201`, never with dotted
-     decimal. IPvFuture literals are invalid. Zone identifiers, including
-     RFC 6874 `%25zone` syntax, are invalid.
+     decimal, while `192.0.2.1::1` is invalid. IPvFuture literals are invalid.
+     Zone identifiers, including RFC 6874 `%25zone` syntax, are invalid.
 5. A port, when present, MUST contain only ASCII decimal digits, begin with
    `1` through `9`, and have value 1 through 65535. Remove port 443 for `https`
    and port 80 for `http`; emit every other port as its shortest decimal form.
@@ -265,6 +283,14 @@ from this v1 document.
 
 ## Resolution precedence
 
+A resolver request is a closed JSON-shaped object. It requires string field
+`resource` and permits only optional `explicit_connection`, `environment`, and
+`selected_context` fields. `explicit_connection` and `selected_context` MUST be
+strings when present. `environment` MUST be a map of string keys to string
+values. A non-object request is `invalid_type`, a missing `resource` is
+`missing_field`, and any other field is `unknown_field`; these structural checks
+precede the resolution steps below.
+
 For a request for product/resource `R`, connection resolution is exactly:
 
 1. An explicit per-request connection override.
@@ -328,6 +354,10 @@ Node launcher implementation MUST recognize them before product dispatch. Their
 subcommands, flags, output, and persistence behavior are not implemented or
 specified here.
 
+Product discovery, `determa list`, and launcher help MUST omit executables
+whose product stem is one of these reserved names, including
+implementation-suffixed forms such as `determa-config-rust`.
+
 Until command syntax is specified, invoking `determa config`, `determa context`,
 or `determa auth` MUST fail locally before product dispatch with exit status
 `2`, empty stdout, and stderr exactly:
@@ -388,12 +418,12 @@ The following work is intentionally excluded from v1 and requires separate
 issues and review before implementation:
 
 - Configuration-file discovery, editing, and credential-provider behavior.
-- Launcher parsing and behavior for the reserved family commands.
+- Subcommand syntax and behavior beneath the reserved family commands.
 - A versioned managed/self-hosted protocol, capability discovery, closed error
   envelopes, resource identity, authentication rules, idempotency, concurrency,
   pagination, TLS, and redirect rules.
 - Language-specific `DetermaClient` packages and transport implementations.
-- Shared routing conformance vectors and protocol conformance.
+- Protocol conformance beyond the shared local resolver vectors.
 - Durable host-owned route-binding/outbox schemas and SaaS control-plane work.
 - State specification, engine, checkpoint, store, socket, MCP, or example
   changes.

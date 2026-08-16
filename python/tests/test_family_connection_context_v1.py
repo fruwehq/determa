@@ -27,7 +27,10 @@ def assert_case(case: dict[str, Any], operation: Callable[[], Any]) -> None:
             operation()
         assert exc_info.value.code == expected["error"]
     else:
-        assert operation() == expected["value"]
+        value = operation()
+        if isinstance(value, family.ValidatedConfiguration):
+            value = value.to_value()
+        assert value == expected["value"]
 
 
 def test_unicode_data_version() -> None:
@@ -79,7 +82,7 @@ def test_environment_distinct_sets() -> None:
 
 
 @pytest.fixture(scope="module")
-def routing_configurations() -> dict[str, dict[str, Any]]:
+def routing_configurations() -> dict[str, family.ValidatedConfiguration]:
     fixture = load_fixture("routing.json")
     return {
         name: family.parse_configuration_source(source)
@@ -89,7 +92,54 @@ def routing_configurations() -> dict[str, dict[str, Any]]:
 
 @pytest.mark.parametrize("case", load_fixture("routing.json")["cases"], ids=lambda case: case["id"])
 def test_routing_vectors(
-    case: dict[str, Any], routing_configurations: dict[str, dict[str, Any]]
+    case: dict[str, Any],
+    routing_configurations: dict[str, family.ValidatedConfiguration],
 ) -> None:
     configuration = routing_configurations[case["configuration"]]
     assert_case(case, lambda: family.resolve_connection(configuration, case["request"]))
+
+
+def test_decoded_configuration_is_opaque_and_isolated_from_mutation() -> None:
+    source = {
+        "version": 1,
+        "connections": {"cloud": {"endpoint": "https://example.com"}},
+        "contexts": {},
+    }
+    configuration = family.validate_configuration(source)
+    source["connections"]["cloud"]["endpoint"] = "https://changed.example"
+    exported = configuration.to_value()
+    exported["connections"].clear()
+
+    assert (
+        family.resolve_connection(
+            configuration,
+            {"resource": "state", "explicit_connection": "cloud"},
+        )
+        == "cloud"
+    )
+
+
+@pytest.mark.parametrize("configuration", [None, {}, []])
+def test_resolver_rejects_unvalidated_configuration(configuration: Any) -> None:
+    with pytest.raises(family.FamilyConnectionError) as exc_info:
+        family.resolve_connection(configuration, {"resource": "state"})
+    assert exc_info.value.code == "invalid_type"
+
+
+@pytest.mark.parametrize("value", [None, [], "configuration", 1])
+def test_validator_rejects_non_object_input_with_family_error(value: Any) -> None:
+    with pytest.raises(family.FamilyConnectionError) as exc_info:
+        family.validate_configuration(value)
+    assert exc_info.value.code == "invalid_type"
+
+
+@pytest.mark.parametrize("request_value", [None, [], "state", 1])
+def test_resolver_rejects_malformed_request_without_native_exception(
+    request_value: Any,
+) -> None:
+    configuration = family.validate_configuration(
+        {"version": 1, "connections": {}, "contexts": {}}
+    )
+    with pytest.raises(family.FamilyConnectionError) as exc_info:
+        family.resolve_connection(configuration, request_value)
+    assert exc_info.value.code == "invalid_type"

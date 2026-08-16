@@ -47,6 +47,28 @@ class NonIntegerNumberToken:
     source: str
 
 
+_VALIDATED_CONFIGURATION_TOKEN = object()
+
+
+class ValidatedConfiguration:
+    """Opaque, immutable validated Family Connection/Context v1 configuration."""
+
+    __slots__ = ("__serialized",)
+
+    def __init__(self, serialized: str, token: object = None):
+        if token is not _VALIDATED_CONFIGURATION_TOKEN:
+            raise _error("invalid_type")
+        self.__serialized = serialized
+
+    def to_value(self) -> dict[str, Any]:
+        """Return a fresh JSON-shaped copy of the normalized configuration."""
+
+        return json.loads(self.__serialized)
+
+    def _model(self) -> dict[str, Any]:
+        return json.loads(self.__serialized)
+
+
 def _error(code: str) -> FamilyConnectionError:
     return FamilyConnectionError(code)
 
@@ -64,7 +86,7 @@ def _reject_nonfinite_constant(_value: str) -> Any:
     raise _error("invalid_source")
 
 
-def parse_configuration_source(source: Any) -> dict[str, Any]:
+def parse_configuration_source(source: Any) -> ValidatedConfiguration:
     """Parse and validate a JSON source string into the closed logical model."""
 
     if not isinstance(source, str):
@@ -81,7 +103,23 @@ def parse_configuration_source(source: Any) -> dict[str, Any]:
         raise
     except (json.JSONDecodeError, UnicodeError) as exc:
         raise _error("invalid_source") from exc
-    return validate_configuration(value)
+    _require_unicode_scalars(value)
+    return _validate_configuration(value, source_tokens=True)
+
+
+def _require_unicode_scalars(value: Any) -> None:
+    if isinstance(value, str):
+        if any(0xD800 <= ord(character) <= 0xDFFF for character in value):
+            raise _error("invalid_source")
+        return
+    if isinstance(value, list):
+        for item in value:
+            _require_unicode_scalars(item)
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            _require_unicode_scalars(key)
+            _require_unicode_scalars(item)
 
 
 def _require_closed_object(value: Any, required: set[str], optional: set[str]) -> dict[str, Any]:
@@ -124,16 +162,28 @@ def _validate_routes(value: Any, connection_names: set[str]) -> dict[str, str]:
     return result
 
 
-def validate_configuration(value: Any) -> dict[str, Any]:
+def validate_configuration(value: Any) -> ValidatedConfiguration:
     """Validate a decoded JSON-like configuration value."""
 
+    _require_unicode_scalars(value)
+    return _validate_configuration(value, source_tokens=False)
+
+
+def _validate_configuration(
+    value: Any, *, source_tokens: bool
+) -> ValidatedConfiguration:
     root = _require_closed_object(
         value,
         {"version", "connections", "contexts"},
         {"default_context", "defaults"},
     )
     version = root["version"]
-    if not isinstance(version, IntegerToken) or version.source != "1":
+    valid_version = (
+        isinstance(version, IntegerToken) and version.source == "1"
+        if source_tokens
+        else type(version) is int and version == 1
+    )
+    if not valid_version:
         raise _error("invalid_version")
 
     raw_connections = root["connections"]
@@ -180,7 +230,8 @@ def validate_configuration(value: Any) -> dict[str, Any]:
         normalized_root["defaults"] = {
             "routes": _validate_routes(defaults["routes"], connection_names)
         }
-    return normalized_root
+    serialized = json.dumps(normalized_root, ensure_ascii=False, separators=(",", ":"))
+    return ValidatedConfiguration(serialized, _VALIDATED_CONFIGURATION_TOKEN)
 
 
 def validate_resource(value: Any) -> list[str]:
@@ -634,12 +685,20 @@ def _first_route(routes: dict[str, str], resource: str) -> Any:
     return None
 
 
-def resolve_connection(configuration: dict[str, Any], request: dict[str, Any]) -> str:
+def resolve_connection(configuration: Any, request: Any) -> str:
     """Resolve one request to a named connection using exact v1 precedence."""
 
-    resource = request.get("resource")
+    if not isinstance(configuration, ValidatedConfiguration):
+        raise _error("invalid_type")
+    request = _require_closed_object(
+        request,
+        {"resource"},
+        {"explicit_connection", "environment", "selected_context"},
+    )
+    model = configuration._model()
+    resource = request["resource"]
     validate_resource(resource)
-    connections = configuration["connections"]
+    connections = model["connections"]
 
     if "explicit_connection" in request:
         explicit = request["explicit_connection"]
@@ -668,20 +727,20 @@ def resolve_connection(configuration: dict[str, Any], request: dict[str, Any]) -
 
     if "selected_context" in request:
         selected = request["selected_context"]
-        if not isinstance(selected, str) or selected not in configuration["contexts"]:
+        if not isinstance(selected, str) or selected not in model["contexts"]:
             raise _error("invalid_context")
-        connection = _first_route(configuration["contexts"][selected]["routes"], resource)
+        connection = _first_route(model["contexts"][selected]["routes"], resource)
         if connection is not None:
             return connection
 
-    defaults = configuration.get("defaults", {"routes": {}})
+    defaults = model.get("defaults", {"routes": {}})
     connection = _first_route(defaults["routes"], resource)
     if connection is not None:
         return connection
 
-    default_context = configuration.get("default_context")
+    default_context = model.get("default_context")
     if default_context is not None:
-        connection = _first_route(configuration["contexts"][default_context]["routes"], resource)
+        connection = _first_route(model["contexts"][default_context]["routes"], resource)
         if connection is not None:
             return connection
     raise _error("unresolved_connection")

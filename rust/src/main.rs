@@ -63,7 +63,14 @@ fn split_variant(stem: &str, all: &BTreeSet<String>) -> (String, Option<String>)
 
 /// Products → sorted implementation variants on `PATH` (canonical products map to empty).
 fn discover() -> Vec<(String, Vec<String>)> {
-    let all = stems();
+    let all: BTreeSet<String> = stems()
+        .into_iter()
+        .filter(|stem| {
+            !RESERVED_FAMILY_COMMANDS
+                .iter()
+                .any(|reserved| stem.split('-').next() == Some(*reserved))
+        })
+        .collect();
     let mut products: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for stem in &all {
         let (product, impl_) = split_variant(stem, &all);

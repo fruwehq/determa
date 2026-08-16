@@ -102,6 +102,26 @@ if (process.platform !== "win32") {
   r = run(["--help"], { PATH: stateDir });
   assert.ok(r.stdout.includes("state (python, rust)"), r.stdout);
   assert.ok(r.stdout.includes("DETERMA_<PRODUCT>_IMPL"));
+
+  const reservedDir = fs.mkdtempSync(path.join(os.tmpdir(), "determa-discovery-"));
+  for (const name of [
+    "determa-alpha",
+    "determa-auth",
+    "determa-config",
+    "determa-config-rust",
+    "determa-context",
+  ]) {
+    const executable = path.join(reservedDir, name);
+    fs.writeFileSync(executable, "#!/bin/sh\n");
+    fs.chmodSync(executable, 0o755);
+  }
+  r = run(["list"], { PATH: reservedDir });
+  assert.strictEqual(r.stdout, "alpha\n");
+  r = run(["--help"], { PATH: reservedDir });
+  assert.ok(r.stdout.includes("  alpha"));
+  assert.ok(!r.stdout.includes("  auth"));
+  assert.ok(!r.stdout.includes("  config"));
+  assert.ok(!r.stdout.includes("  context"));
 }
 
 console.log("determa node launcher: all tests passed");

@@ -15,6 +15,11 @@ categories = ["command-line-utilities"]
 name = "determa"
 path = "src/main.rs"
 
+[[example]]
+name = "family-connection-context-v1-vectors"
+path = "examples/family_connection_context_v1_vectors.rs"
+required-features = ["repository-fixtures"]
+
 [features]
 repository-fixtures = []
 
@@ -26,4 +31,4 @@ icu_properties_data = "=1.5.1"
 idna = "=1.1.0"
 idna_adapter = "=1.2.0"
 serde = "1"
-serde_json = "1"
+serde_json = { version = "1", features = ["arbitrary_precision"] }
