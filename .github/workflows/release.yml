@@ -2,20 +2,28 @@ name: release
 
 # Tag-triggered release for the determa launcher.
 #
-# PyPI publish uses Trusted Publishing (OIDC) — no stored token. Configure a PyPI
-# Trusted Publisher for project `determa` (repo fruwehq/determa, workflow
-# release.yml, environment `pypi`) before the first tag-driven release.
-#
-# npm publish also uses Trusted Publishing (OIDC) with no stored token.
-# All jobs share the same `v*` tag; workflow_dispatch runs only the crates job (used
-# for a first crates.io publish without re-tagging).
+# PyPI and npm publish through Trusted Publishing (OIDC) with no stored token.
+# Tag releases publish all ecosystems; workflow_dispatch runs only the crates job.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
 
 jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Verify synchronized package versions and release tag
+        run: python3 scripts/verify_release.py --event-name "$GITHUB_EVENT_NAME" --tag "$RELEASE_TAG"
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || '' }}
+
   build:
+    needs: preflight
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     defaults:
@@ -48,9 +56,10 @@ jobs:
         with:
           name: dist
           path: dist/
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
 
   crates:
+    needs: preflight
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -60,19 +69,17 @@ jobs:
         working-directory: rust
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: rust-lang/crates-io-auth-action@v1
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable 2026-09-03
+      - uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
         id: auth
       - name: Publish to crates.io
         run: cargo publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
 
-  # npm Trusted Publishing (OIDC) — no stored token. Requires the `determa` npm
-  # package to already exist with a configured trusted publisher (repo fruwehq/determa,
-  # workflow release.yml). The very first 0.1.0 is published manually to create the
-  # package; every release after that runs here token-lessly (with provenance).
   npm:
+    needs: preflight
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     defaults:
       run:
